@@ -1,0 +1,26 @@
+# Build-time ONLY dependencies for tools/separation/convert_melband_roformer.py.
+#
+# ⚠️ This is NOT an app runtime dependency. MacAMP ships ZERO Python. This file
+#    exists solely so a developer (or a release machine) can regenerate the
+#    Core ML separation model. See tools/separation/README.md.
+#
+# Pins are exact for reproducibility. torch/coremltools are a documented-compatible
+# pair (coremltools 8.2 supports torch 2.5.x).
+#
+# The `MelBandRoformer` CLASS is NOT a pip dependency: the converter downloads Kim's
+# vendored copy (models/mel_band_roformer/ at the pinned KIM_CONFIG_COMMIT) — the
+# exact architecture the checkpoint was trained with. lucidrains' upstream
+# `bs-roformer` package has drifted (hyper-connections, value-residual, a default
+# linear-transformer slot) and its state_dict no longer matches this checkpoint.
+# The pins below are what Kim's vendored code imports at runtime.
+
+torch==2.5.1
+coremltools==8.2
+numpy==1.26.4
+PyYAML==6.0.2
+einops==0.8.1
+huggingface-hub==0.26.2
+beartype==0.19.0
+rotary-embedding-torch==0.8.6
+librosa==0.10.2.post1
+packaging==24.2

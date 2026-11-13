@@ -1,0 +1,161 @@
+---
+title: Troubleshooting
+description: Common issues and how to fix them in MacAMP on macOS and iOS.
+---
+
+## macOS
+
+### "MacAMP cannot be opened because the developer cannot be verified"
+
+You downloaded the app from an unofficial source. Delete it and re-download from the official releases page.
+
+### "MacAMP is damaged and can't be opened" on first launch
+
+The download is not damaged. This is what macOS Sequoia says about an **ad-hoc-signed** build (a community / CI build made without an Apple Developer account). Right-click → Open no longer bypasses it. Allow the app once via **System Settings → Privacy & Security → "Open Anyway"** — the full step-by-step is in [Install and First Open](./install#first-launch--getting-past-gatekeeper). You only do this once; updates do not re-trigger it.
+
+### "Check for Updates…" is greyed out
+
+The button (**Settings > Updates**) is disabled only while a check is already running. Wait a few seconds and it re-enables. If it never re-enables, quit and relaunch MacAMP.
+
+### An update won't install
+
+MacAMP verifies every update's cryptographic signature before installing and discards anything that fails. If an update repeatedly refuses to install, download the latest DMG manually from the releases page and drag it over your existing copy — your library, playlists, and settings are stored separately and are not touched.
+
+### No music appears after adding a folder
+
+1. Open **Settings > Library** and confirm the folder shows a green checkmark badge.
+2. If it shows a yellow triangle, macOS denied access. Click **Open System Settings** in the banner and grant MacAMP access under **Privacy & Security > Files and Folders** or **Full Disk Access**.
+3. If the folder shows a red X, the folder no longer exists at that path. Remove it and add the correct location.
+
+### A track shows a yellow triangle badge in the library
+
+The file is missing — it was moved, renamed, or deleted. MacAMP keeps the library row so you don't lose metadata. If you moved the file, remove the old folder root and add the new location. The scanner will re-import the file and the badge will clear.
+
+### A track shows an external drive icon badge
+
+The file is on a volume that isn't currently mounted. Connect the drive and the badge clears automatically.
+
+### No sound
+
+1. Check that the correct audio output device is selected in **System Settings > Sound**.
+2. Make sure the volume fader in the player bar or mini player isn't at zero.
+3. Try pausing and resuming playback.
+4. Quit and relaunch MacAMP.
+
+### The visualizer is blank or shows only a background color
+
+Start playback and confirm the track is advancing. On macOS, check **Settings > Visualizer > Show Visualizer in Player Bar**. On iOS, close and reopen the Visualizer sheet from Now Playing.
+
+### The menu-bar icon is missing
+
+MacAMP's menu-bar extra is always active while the app is running. If you don't see it, the menu bar may be full. Try hiding other menu-bar items or use **MacAMP > Settings > General** to confirm the app is running.
+
+### The assistant finds music but won't play it
+
+The assistant can search and propose playlists without the playback grant, so
+"I found Aurora Anthem — would you like me to play it?" is normal behavior when
+the grant is off. To let the assistant actually start playback:
+
+1. Open **Settings > Intelligence**.
+2. Find the **Playback Control** toggle and turn it on.
+
+With the toggle on, you can say "play it", "pause", or "what's playing?" and the
+assistant calls the playback tools instead of just describing what it would do.
+
+If you're using an external MCP client rather than the in-app assistant, the
+control grant is separate. See [External Access — Playback control
+access](./external-access#playback-control-access).
+
+### I asked the assistant for a playlist and nothing happened
+
+MacAMP shows an inline error banner when a request fails rather than silently
+doing nothing. If you see no banner and no proposal:
+
+1. Confirm the **NL Creation** feature bundle is on in **Settings > Intelligence**.
+2. Confirm the master **Use Intelligence features** toggle is on.
+3. Try relaunching MacAMP and submitting again.
+
+If a banner does appear, it explains the reason. Common ones:
+
+- **Nothing matched** — no tracks in your library fit the request. Try a broader
+  description.
+- **Feature is switched off** — NL Creation is disabled in the Intelligence pane.
+- **Provider unreachable** — see below.
+
+### My AI provider says it's unreachable
+
+Check the provider-specific issue:
+
+- **Ollama** — confirm the Ollama server is running and the host address in
+  **Settings > Intelligence > Provider** is correct.
+- **Anthropic Claude / OpenAI** — your API key may have expired. Click **Set Up…**
+  and re-enter it.
+- **Claude Subscription / ChatGPT** — your session may have expired. Click
+  **Sign In…** to refresh it.
+
+When a provider fails, MacAMP falls back to its built-in matcher and shows a notice
+beside the proposal saying it did so. You still get a result.
+
+### Claude Subscription doesn't see my CLI login
+
+MacAMP detects the Claude CLI session at launch. If it's not picking it up:
+
+1. Confirm you're signed into the CLI — run `claude` in Terminal and check your
+   account is shown.
+2. Relaunch MacAMP. The probe runs at startup, not continuously.
+
+If you previously signed into MacAMP directly with your own Claude session, that
+takes precedence. Remove it (click **Set Up…** then **Remove**) to go back to
+CLI detection.
+
+### Lyrics don't appear
+
+See [Lyrics — Troubleshooting](./lyrics#troubleshooting-lyrics) for a step-by-step checklist.
+
+### The EQ doesn't seem to affect the sound
+
+Confirm that at least one band is boosted or cut (not all at 0 dB). If you applied the **Flat** preset, all bands are at 0 dB by design.
+
+---
+
+## iOS
+
+### Import button doesn't show my music files
+
+The document picker shows only files the system knows about. If your files are in iCloud Drive and haven't downloaded yet, wait for them to appear (a cloud icon with a download arrow indicates a pending download). Tap the file to trigger the download.
+
+### A track won't play
+
+The file format may not be supported, or the file may be corrupt. MacAMP skips corrupt files and moves to the next track in the queue. Check the file on a desktop app to confirm it's valid.
+
+### The lock screen shows no track information
+
+Now-playing information reaches the lock screen and Control Center through `MPNowPlayingInfoCenter`, which only publishes while a track is loaded. Start playback in MacAMP, then lock the device. If the card still doesn't appear, force-quit and reopen the app.
+
+MacAMP has no home-screen widget, Dynamic Island Live Activity, or StandBy view — the lock screen and Control Center are the only system now-playing surfaces.
+
+### No sound in the background
+
+Background audio requires the app to have been playing when it moved to the background. If you force-quit MacAMP, background audio stops. Reopen the app and resume playback.
+
+### The app crashes on launch
+
+Force-quit the app (swipe up in the app switcher), then relaunch. If the crash persists, delete and reinstall the app. Your library data is stored in the app's container and will be lost on reinstall — back up any important playlists first.
+
+---
+
+## General
+
+### How do I report a bug?
+
+File an issue on the GitHub repository with:
+- MacAMP version (Settings > About on iOS; **MacAMP > About MacAMP** on macOS).
+- macOS or iOS version.
+- Steps to reproduce.
+- Any relevant error messages or crash logs.
+
+### Where is my library database stored?
+
+**macOS:** `~/Library/Application Support/MacAMP/` (the database is `library.sqlite`)
+
+**iOS:** The app's private container, accessible via the Files app under **On My iPhone > MacAMP**.

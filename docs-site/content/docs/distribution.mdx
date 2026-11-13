@@ -1,0 +1,636 @@
+---
+title: Distribution
+description: Release runbook for the direct-distribution macOS build of MacAMP — ad-hoc and Developer-ID signing, Sparkle auto-update, notarization, and CI release pipeline.
+---
+
+This is the release runbook for the **direct-distribution** macOS build of MacAMP
+(a `.dmg` delivered over the web, auto-updated by **Sparkle 2**). MacAMP is
+direct-distribution only — there is no App Store channel. The shipped `macampMac`
+binary includes the projectM library, all AI subscription connectors,
+and the karaoke separation model.
+
+There are **two signing modes**, and the pipeline supports both end to end:
+
+| Mode | Requires | Gatekeeper result |
+|---|---|---|
+| **ad-hoc** (default) | nothing — no Apple account, no secrets | user must allow once via **System Settings → Privacy & Security → "Open Anyway"** |
+| **Developer ID** (`--identity`) | paid Apple Developer Program membership | launches silently once notarized |
+
+> **No credentials or signing identities are ever committed.** Every script reads
+> them from the environment, and every script has a dry / validate mode that runs
+> with **zero** Apple secrets so CI and contributors can exercise the pipeline.
+
+---
+
+## 1. The one-command release
+
+```sh
+# Everything: model → build → sign → dmg → notarize → appcast → verify
+./scripts/release.sh --version 1.2.3
+```
+
+`scripts/release.sh` is a **pure orchestrator**. Every unit of real work belongs to
+a script that already exists and is independently runnable; `release.sh` only
+decides *what* runs, *in which order*, and *halts on the first thing that would
+produce a broken artifact*. It never re-implements a step.
+
+### Stages
+
+| # | Stage | What runs | Exit on failure |
+|---|---|---|---|
+| **0** | `PREFLIGHT` | required tools present, `--version` sane, git tree clean?, choose signing mode | `1` |
+| **1** | `MODEL` | `tools/separation/fetch-and-convert-model.sh` — **fail-fast**: packaging never continues without a valid karaoke model unless `--no-model` was passed explicitly | `2` |
+| **2** | `BUILD` | `scripts/build-macamp.sh --release` (its own MODEL / GENERATE / CLEAN-SLATE / BUILD stages) → `build/MacAMP.app` | `3` |
+| **3** | `SIGN` | Developer ID → `scripts/codesign-app.sh` (hardened runtime + secure timestamp, inside-out). ad-hoc → `codesign --force --deep --sign -`, applied inline | `4` |
+| **4** | `DMG` | `scripts/package-dmg.sh --app <app> --output dist/MacAMP-<v>.dmg` | `5` |
+| **5** | `NOTARIZE` | `scripts/notarize.sh` when Developer-ID **and** notary credentials are present; otherwise a loud `NOTARIZE: SKIPPED` banner | `6` |
+| **6** | `APPCAST` | **verifies** (never generates) the Sparkle EdDSA key, archives the `.dmg` into `dist/releases/`, runs `scripts/make-appcast.sh` over that directory, and asserts the emitted feed really carries a `sparkle:edSignature` | `7` |
+| **7** | `VERIFY` | `codesign -dv`, `spctl --assess`, `hdiutil verify`, `codesign --verify --deep --strict`, the compiled `MelBandRoformer.mlmodelc` and `libprojectM-4.4.dylib` inside the bundle, the bundled downloader tools (the `yt-dlp` tree with a non-empty `_internal/`, `ffmpeg`/`ffprobe`, the three GPLv3 texts, an exec smoke, the one-directory shape probe, and the ffmpeg `--enable-gpl` licence gate), measured sizes, and a `dist/RELEASE-NOTES-<v>.md` stub | `8` |
+
+Exit `0` = release produced (or dry-run plan printed).
+
+### Flags
+
+| Flag | Meaning |
+|---|---|
+| `--version <v>` | **REQUIRED.** Names `MacAMP-<v>.dmg` and the release notes, **and is stamped into the built bundle** (`CFBundleShortVersionString`) — see [Version wiring](#version-wiring--automatic-but-know-how-it-works). |
+| `--dry-run` | Plan the whole pipeline. **Zero** Keychain access, **zero** network, **zero** `codesign` invocations, and nothing is written into the output directory (dry-run artifacts go to a printed temp dir). |
+| `--no-model` | Ship **without** the karaoke separation model. Disables the stage-[1] fail-fast gate and the stage-[7] model check; karaoke resolves `.unavailable` in the shipped app. |
+| `--keep-installs` | Forwarded to `build-macamp.sh`: do **not** remove other installed copies of MacAMP. |
+| `--skip-appcast` | Skip stage [6] entirely (no key check, no archive copy, no appcast). The `.dmg` is still produced and verified. |
+| `--identity <id>` | Developer ID signing identity; overrides `$DEVELOPER_ID_APPLICATION`. **Its presence is what selects Developer-ID mode over ad-hoc.** |
+| `--output-dir <d>` | Where the release artifacts land (default `dist/`). |
+| `-h`, `--help` | Full inline help. |
+
+### Environment
+
+| Variable | Used by | What it is |
+|---|---|---|
+| `DEVELOPER_ID_APPLICATION` | `release.sh`, `codesign-app.sh`, `package-dmg.sh` | Full identity name, e.g. `Developer ID Application: Jane Roe (TEAMID1234)`. Selects Developer-ID mode when `--identity` is absent. |
+| `APPLE_ID` | `notarize.sh` | Apple ID e-mail of the notarization account. |
+| `NOTARIZATION_TEAM_ID` | `notarize.sh` | Your 10-character Apple Developer **Team ID**. |
+| `NOTARIZATION_APP_PASSWORD` | `notarize.sh` | An **app-specific password** (NOT your Apple ID password) from [https://appleid.apple.com](https://appleid.apple.com) → *Sign-In and Security → App-Specific Passwords*. |
+| `MACAMP_BUILD_NUMBER` | `build-macamp.sh` | `CFBundleVersion` override, used instead of the git commit count. Integer or dot-separated integers only. Ignored without `--app-version`. |
+| `DEVELOPER_DIR` | everything that shells out to `xcodebuild` | `release.sh` exports `/Applications/Xcode.app/Contents/Developer` when unset — `xcodebuild`, the `@Observable` macro plugin, and Swift Testing all need it. |
+
+### Typical invocations
+
+```sh
+# Credential-free release (ad-hoc; Gatekeeper needs "Open Anyway")
+./scripts/release.sh --version 1.2.3
+
+# Full Developer-ID + notarized release
+export APPLE_ID="jane@example.com"
+export NOTARIZATION_TEAM_ID="TEAMID1234"
+export NOTARIZATION_APP_PASSWORD="abcd-efgh-ijkl-mnop"
+./scripts/release.sh --version 1.2.3 \
+  --identity "Developer ID Application: Jane Roe (TEAMID1234)"
+
+# Plan only — safe anywhere, no secrets, no network, no Keychain
+./scripts/release.sh --version 0.0.0-test --dry-run
+
+# Small build: no karaoke model (~88% smaller download, see Sizes below)
+./scripts/release.sh --version 1.2.3-lite --no-model
+```
+
+### Two honest caveats about `--dry-run`
+
+A "dry run" must never overstate what it verified:
+
+- **`scripts/build-macamp.sh` has no `--dry-run`.** It regenerates the Tuist
+  workspace, removes stale installs, and runs a full Release `xcodebuild`. Stage
+  [2] therefore **prints** the exact command instead of running it.
+  (`build-macamp.sh --clean-only` exists but is *destructive* — it really removes
+  installed apps — so it is **not** a dry-run substitute.)
+- **`scripts/package-dmg.sh --dry-run` really does assemble and write an
+  (unsigned) `.dmg`.** Stage [4] chains it only when a built app exists and
+  redirects its output into the dry-run temp dir, so `<dist>/` stays untouched.
+  A dry run therefore costs one full `ditto` + `hdiutil create`.
+
+### `release.sh` will remove an installed `/Applications/MacAMP.app`
+
+Stage [2] inherits `build-macamp.sh`'s **CLEAN-SLATE** stage, which removes *other*
+installed copies of MacAMP so you can never QA a stale binary by accident. On a
+machine that has MacAMP installed for real, the bundle id matches and the install
+**is** removed. Pass `--keep-installs` if you want to keep it. (CLEAN-SLATE never
+touches anything inside the repo, anything under a `DerivedData` path, an
+`.xcarchive`, a bundle whose own `CFBundleIdentifier` differs, or a bundle whose
+executable has a live process.)
+
+### Version wiring — automatic, but know how it works
+
+**Sparkle compares the *bundle's* version, not the `.dmg` file name.** `--version`
+therefore has to reach the built app, and it does — no manual edit is needed
+before a release:
+
+```
+release.sh --version 1.2.3
+  └─▶ build-macamp.sh --release --app-version 1.2.3
+        └─▶ xcodebuild … MARKETING_VERSION=1.2.3 CURRENT_PROJECT_VERSION=222
+              └─▶ CFBundleShortVersionString = 1.2.3
+                  CFBundleVersion            = 222
+```
+
+| Key | Build setting | Value |
+|---|---|---|
+| `CFBundleShortVersionString` | `MARKETING_VERSION` | whatever `--version` said |
+| `CFBundleVersion` | `CURRENT_PROJECT_VERSION` | `git rev-list --count HEAD` |
+
+The build number is the **git commit count**: an integer that only grows with
+history, needs no state file, and is reproducible from any clone of the same
+commit. `MACAMP_BUILD_NUMBER` overrides it (CI, or re-cutting an existing tag);
+outside a git repo it degrades to a UTC `yyyymmddHHMM` stamp — monotonic too, but
+*much* larger, so never mix the two schemes across releases of one app.
+
+**Why `macOS/Project.swift` maps both keys to `$(MARKETING_VERSION)` /
+`$(CURRENT_PROJECT_VERSION)`.** Tuist's `.extendingDefault` template writes the
+literals `1.0` and `1` into the derived `Info.plist`, and **a command-line build
+setting cannot override a literal that is already in the plist — it is ignored
+with no warning.** Measured: `xcodebuild … MARKETING_VERSION=9.9.9` against the
+literal template produced a `1.0` bundle. The indirection is what makes the
+override effective, so if it is ever reverted, `--app-version` silently becomes a
+no-op. Two guards exist for exactly that:
+
+- `build-macamp.sh` re-reads both keys out of the app it just built and **fails**
+  if the stamp did not land.
+- `release.sh` stage [2] independently reads them and warns if they disagree with
+  `--version` — the only guard that still applies to anyone invoking
+  `build-macamp.sh` directly without `--app-version`.
+
+Defaults are unchanged for everyone else: a plain `build-macamp.sh`, an Xcode
+build, or CI still produces `1.0 (1)`.
+
+### Measured (ad-hoc, model bundled)
+
+| Metric | Pre-downloader baseline | Shipped now |
+|---|---|---|
+| Wall clock, full release | ≈ 4.5 min | ≈ 4.5 min (Release `xcodebuild` dominates) |
+| `MacAMP.app` | ≈ 528 MiB | **777 MiB** |
+| `MacAMP-<v>.dmg` | ≈ 430 MiB | **541 MiB** (567,460,742 bytes) |
+| `MelBandRoformer.mlmodelc` inside the bundle | ≈ 467 MiB | ≈ 467 MiB |
+
+`release.sh` measures these every run and prints them in the summary; it never
+asserts a size threshold (one would rot on the first dependency bump). A
+`--no-model` build is the small download.
+
+The whole gap between the two columns is the bundled downloader: `yt-dlp` +
+`ffmpeg` + `ffprobe` are **250 MiB uncompressed** and add **+111 MiB to the
+compressed `.dmg`**. That cost is paid again by every image retained in the
+append-only `dist/releases/` archive.
+
+#### Why the one-directory `yt-dlp` costs only +19 MiB
+
+`yt-dlp` ships as a **one-directory** PyInstaller tree, not the single-file
+executable used until 2026-09-10. Measured on the same machine:
+
+| | onefile (until 2026-09-10) | one-directory (shipped) |
+|---|---|---|
+| On disk | 35.2 MiB, one file | **124 MiB**, 133 files — a 10.1 MiB launcher + a 114 MiB `_internal/` |
+| Compressed `.dmg` | 522 MiB | **541 MiB** |
+
+So the tree is **≈3.5× larger uncompressed (+89 MiB)** yet costs only
+**+19 MiB compressed**. The reason is that the two shapes compress very
+differently: a onefile is *already* an internally-compressed archive, so gzip
+gets it to 98.8 % of its raw size — it saves 1.2 %. The one-directory tree is
+raw Mach-O dylibs, which gzip to 40.7 % of raw. Almost all of the extra 89 MiB
+is squeezed back out by the image compressor.
+
+What the +19 MiB buys: `yt-dlp --version` warm takes **0.28 s** from the tree
+against **12–14 s** for the onefile, which had to unpack ~37 MB to `$TMPDIR` on
+*every* exec. That startup cost is paid twice per download (metadata fetch, then
+transfer) and once per playlist paste, so it dominated perceived latency.
+Verifying the shape is a release gate, because installing the wrong asset fails
+*silently*: the bare onefile is published in the same upstream release, it runs
+fine, and it simply ignores the `_internal/` beside it. So stage `[7]` copies the
+bundled launcher **alone into a scratch directory** and fails the release if it
+still starts — only a onefile can. Both CI pipelines run the same probe.
+
+### Output layout (`dist/`, git-ignored)
+
+```
+dist/
+  MacAMP-<v>.dmg              the release image
+  releases/                   APPEND-ONLY archive of every shipped .dmg
+  appcast.xml                 EdDSA-signed Sparkle feed
+  RELEASE-NOTES-<v>.md        generated stub — replace before publishing
+```
+
+---
+
+## 2. Sparkle: keys, deltas, and the in-app updater
+
+### 2.1 One-time EdDSA key setup
+
+Sparkle 2 signs updates with an **EdDSA (ed25519)** key pair. Create it **once**,
+before your first release — never in the middle of one:
+
+```sh
+scripts/setup-sparkle-key.sh              # create-if-absent + export a backup
+scripts/setup-sparkle-key.sh --dry-run    # print the plan; ZERO Keychain access
+scripts/setup-sparkle-key.sh --print-public   # just the base64 public key
+```
+
+The script is idempotent: it reads the existing key when one is present and only
+generates on a genuinely empty Keychain.
+
+**Key-handling rules — enforced by the script, not just documented:**
+
+- The **private** key lives **only** in the login Keychain. It is never printed,
+  never passed on a command line, and never written inside this repo. (Sparkle's
+  deprecated `-s <private-key>` CLI flag is not used anywhere.)
+- The backup export defaults to **`~/MacAMP-sparkle-key-backup.txt`** — *outside*
+  the repository — and is created mode **0600** (staged through a 0700 temp dir,
+  because `generate_keys -x` refuses a pre-existing path and writes 0644). A
+  backup path **inside** the repo is **refused** (exit 1) after canonicalizing
+  both paths, so `--backup ./x`, `../macamp/x`, and symlinked temp dirs are all
+  caught.
+
+| Option | Meaning |
+|---|---|
+| `--dry-run` | Print exactly what would happen. Zero Keychain access, nothing written. |
+| `--print-public` | Print **only** the base64 public key (this is what `release.sh` consumes). Exit 5 if no key exists yet. |
+| `--backup <path>` | Where to export the private-key backup (default `$HOME/MacAMP-sparkle-key-backup.txt`). |
+| `--force-backup` | Overwrite an existing backup file (default: keep it). |
+| `--no-backup` | Skip the backup export entirely (**not** recommended). |
+| `--account <name>` | Keychain account for the key (default: Sparkle's own `ed25519`). |
+| `SPARKLE_KEYS_BIN` (env) | Explicit path to Sparkle's `generate_keys`. Otherwise `PATH` and the usual SwiftPM/Tuist artifact locations are searched. |
+
+> #### 🔐 Back up and escrow the key — this is not optional
+>
+> The exported file **is** the private signing key.
+>
+> 1. Copy its contents into your **password manager** (or your team's secret
+>    escrow) — the same place you would keep a production credential.
+> 2. Then destroy the on-disk copy:
+>    ```sh
+>    rm -P "$HOME/MacAMP-sparkle-key-backup.txt"
+>    ```
+>
+> **If this key is lost, every installed copy of MacAMP stops accepting updates
+> forever.** Installed apps verify signatures against the public key baked into
+> their own `Info.plist`; a new key pair cannot retroactively sign for them, and
+> the only remedy is asking every user to re-download by hand. Treat the escrow
+> step as part of the key-creation task, not as follow-up work.
+
+### 2.2 Embedding the public half
+
+The **public** key ships in the app's `Info.plist`, set in
+`macOS/Project.swift` → `appInfoPlist`:
+
+```swift
+"SUPublicEDKey": "GfbSWrr+xdJgl0vM7tV3s6H+SaaLHelDk/ZbBLm9vLY=",
+"SUFeedURL": "https://downloads.macamp.si/appcast.xml",
+"SUEnableAutomaticChecks": true,
+```
+
+`scripts/setup-sparkle-key.sh` prints exactly the line to paste.
+`SUFeedURL` points at the R2 bucket behind `downloads.macamp.si`. `release.sh` stage [6] refuses to build an appcast when the Keychain key
+and the built app's `SUPublicEDKey` disagree (or when the plist key is missing
+altogether) — updates signed with a key the build does not trust would be silently
+rejected by every installed copy.
+
+Verify the built bundle at any time:
+
+```sh
+plutil -p build/MacAMP.app/Contents/Info.plist | grep -E 'SU(PublicEDKey|FeedURL|EnableAutomaticChecks)'
+```
+
+> #### ⚠️ The key name is `SUPublicEDKey` — verify it, don't guess it
+>
+> **This repo shipped the wrong name.** Commit `4ba7b29` wired the public key in
+> as **`SUEdDSAPublicKey`** — a name that looks entirely plausible, appears in
+> plenty of blog posts, and **does not exist in Sparkle**. Nothing complained:
+>
+> - `SPUUpdater` reads its key by name. Under a name it does not know it simply
+>   finds none, so signature verification is *unconfigured* rather than failing.
+>   `canCheckForUpdates` is still `true` and fetching the feed still succeeds —
+>   only an actual update *install* would have exercised the missing key, which
+>   is why the original QA and two review waves all passed.
+> - `generate_appcast` reads the archived app's `Info.plist` to decide whether an
+>   item needs EdDSA signing. Under the wrong name it concludes "not required",
+>   **exits 0**, prints `Wrote 1 new update…`, and emits an `<enclosure>` with
+>   **no `sparkle:edSignature` attribute at all**. Feeding it the private key
+>   explicitly (`--ed-key-file -`) changes nothing — the decision is made from the
+>   plist, not from key availability, so this is not a Keychain problem.
+>
+> Two silent failures that cancel each other out into a green pipeline. Verify the
+> name against the **pinned binary**, which is the only authority — every key
+> Sparkle reads is a literal inside it:
+>
+> ```sh
+> strings "$(find Tuist/.build -path '*Sparkle.framework/Versions/B/Sparkle')" \
+>   | grep -E '^SU[A-Za-z]+$' | sort -u
+> ```
+>
+> Sparkle 2.9.3 yields `SUPublicEDKey`, `SUPublicDSAKey`, `SUPublicDSAKeyFile`,
+> `SUPublicKeys`, `SUFeedURL`, `SUEnableAutomaticChecks` — and **zero** hits for
+> `SUEdDSAPublicKey`. The same `strings` check on `bin/generate_appcast` confirms
+> the signing side reads the identical name. Re-run this whenever Sparkle is
+> upgraded, and treat a missing `sparkle:edSignature` in the generated appcast as
+> the symptom of a plist key-name drift — `release.sh` stage [6] now fails hard on
+> exactly that so it can never be green-but-broken again.
+
+### 2.3 Binary deltas — why `dist/releases/` is append-only
+
+Sparkle's `generate_appcast` emits **binary delta updates** only when it can see
+more than one version in the archives directory. Stage [6] therefore copies each
+new `.dmg` into `<dist>/releases/` and **never prunes it**: old images are the
+input to the next release's deltas.
+
+- **One archive** → no deltas; deltas begin with the *next* release.
+- **Two or more archives** → `generate_appcast` emits deltas between consecutive
+  versions, and the appcast advertises both the full download and the delta.
+
+Practical consequence for MacAMP specifically: the compiled
+`MelBandRoformer.mlmodelc` is ~467 MiB of a 541 MiB image. A release that changes
+only app code produces a *small* delta; a release that also changes the model
+approaches the full image size. **Ship model updates and app updates in separate
+releases** when you can, so existing users mostly download small deltas.
+
+Keep `dist/releases/` (or whatever `--output-dir` you use) on a machine or volume
+that survives between releases. Losing it does not break anything — it just means
+the next appcast has nothing to diff against and every user gets a full download.
+
+### 2.4 ⚠️ `generate_appcast` needs an unlocked screen the first time
+
+The EdDSA private key's Keychain ACL was granted to **`generate_keys`** — the
+binary that created it. **`generate_appcast` is a different binary**, so its first
+read raises a GUI authorization prompt. On a locked screen that prompt can never be
+displayed and the tool **hangs forever** (measured: `timeout 120` → exit 124, no
+output past its banner).
+
+- Run your **first** release with the screen **unlocked** and click **Always
+  Allow**. Every subsequent release is unattended-safe.
+- Clean up a hung attempt with `pkill -f generate_appcast`.
+- `setup-sparkle-key.sh --print-public` returns *instantly* even on a locked screen
+  (that binary already has ACL access), so `release.sh`'s stage-[6] key
+  **verification** is unattended-safe — only the signing delegate blocks.
+- `make-appcast.sh`'s `SPARKLE_BIN` env var is the seam for pointing at a
+  different `generate_appcast` if you need to test around this.
+
+### 2.5 The in-app updater (wired, not deferred)
+
+Sparkle is fully wired in the macOS shell — this is shipped behaviour, not a plan:
+
+- `MacAMPApp` builds exactly **one** `SPUStandardUpdaterController` in its `init()`
+  and injects an `UpdaterModel` façade into the SwiftUI environment
+  (`macOS/Sources/Updates/SparkleUpdater.swift`).
+- **Preferences ▸ Updates** (a dedicated tenth pane, `UpdatesPreferencesPane`)
+  carries an **Update channel** picker and a live **Check for Updates…** button
+  (a11y id `preferences.updates.checkButton`). The button's enabled state binds to
+  `SPUUpdater.canCheckForUpdates` through a KVO-backed `@Observable` mirror.
+  Automatic background checks are opted in via `SUEnableAutomaticChecks` in
+  `Info.plist` — there is no user-facing toggle, only a caption stating that they
+  happen.
+- **Channel mapping** (`SparkleUpdaterDelegate.allowedChannels(for:)`): Sparkle
+  only offers an appcast item to updaters that allow the item's
+  `<sparkle:channel>`, and untagged items are always offered. So:
+
+  | User setting | `allowedChannels` | Sees |
+  |---|---|---|
+  | **Stable** | `[]` | untagged appcast items only |
+  | **Beta** | `["beta"]` | untagged items **and** items tagged `beta` |
+
+  `beta` is exactly the name `scripts/make-appcast.sh --channel beta` writes.
+- **Local end-to-end testing** (DEBUG builds only): set
+  `MACAMP_SPARKLE_FEED_URL` to override the Info.plist feed. Serve a hand-written
+  appcast whose `sparkle:version` is higher than the build's `CFBundleVersion`:
+
+  ```sh
+  python3 -m http.server 8799 --bind 127.0.0.1 &     # serving appcast.xml
+  MACAMP_SPARKLE_FEED_URL="http://127.0.0.1:8799/appcast.xml" \
+    build/.../MacAMP.app/Contents/MacOS/MacAMP &
+  ```
+
+  A single `GET /appcast.xml 200` in the server log proves the whole chain:
+  `startUpdater()` passed Sparkle's bundle validation, `canCheckForUpdates` is
+  true, and the delegate is attached (the fetched URL came from
+  `feedURLString(for:)`, not from `Info.plist`). Note `open -a` cannot pass
+  environment variables — launch the executable directly. The override is
+  DEBUG-only so a shipping build can never be pointed at an attacker-chosen
+  appcast through the environment.
+
+---
+
+## 3. Karaoke model — channel policy
+
+| Build channel | Model bundled | Karaoke feature |
+|---|---|---|
+| Direct download / Sparkle (macOS) | YES (stage [1], or `tools/separation/fetch-and-convert-model.sh` by hand) | Available on macOS 15+ |
+| Direct download, `--no-model` | NO | Resolves `.unavailable(.modelNotBundled)` |
+| iOS, CI, fresh dev clone | NO | Resolves `.unavailable(.modelNotBundled)` |
+
+The model is **not committed** to the repo (`macOS/Resources/SeparationModel/` is
+git-ignored, and the Tuist resource glob tolerates its absence silently).
+`tools/separation/fetch-and-convert-model.sh`
+is the **single source of truth** for the model stage: it creates the
+`.venv-separation` virtualenv (via `uv`), downloads the pinned checkpoint, converts
+it to a Core ML MLProgram, writes `MelBandRoformer.mlpackage` +
+`model-manifest.json`, verifies them, and exits fast when they already exist.
+`release.sh` and `build-macamp.sh` both delegate to it rather than duplicating any
+of that logic.
+
+- Running `release.sh` on a machine with **no** model artifacts and **no** `uv`
+  installed fails preflight with an explicit message (install `uv`, or pass
+  `--no-model`).
+- Running it with artifacts present makes stage [1] a ~0.08 s cached no-op.
+- The first real conversion downloads a pinned **~900 MB** checkpoint.
+
+iOS builds and fresh dev clones intentionally build without the model; `CoreMLSeparator`'s
+unified `.unavailable(.modelNotBundled)` path covers those identically — no
+special-case code exists. See `Spikes/ADR-karaoke-separation.md` in the repo for the
+full rationale and the license clearance condition recorded there.
+
+---
+
+## 4. Manual step-by-step (advanced / debugging)
+
+`release.sh` is the recommended path. Each stage is still an independently
+runnable script, which is what you want when you are debugging one step, wiring a
+different CI, or reproducing half a release by hand.
+
+| Script | Real mode | Dry / validate mode |
+|---|---|---|
+| `build-macamp.sh` | model + `tuist generate` + CLEAN-SLATE + `xcodebuild` | **none** — `--skip-model` / `--keep-installs` change behaviour, they do not simulate it |
+| `codesign-app.sh` | signs every bundled Mach-O inside-out, then the app | `--dry-run` lists the full signing plan (no identity needed) |
+| `package-dmg.sh` | builds, then signs the `.dmg` | `--dry-run` assembles the layout and builds an **unsigned** `.dmg` |
+| `notarize.sh` | `notarytool submit --wait` + `stapler staple` | `--check-config` validates the env contract, exits 0 |
+| `setup-sparkle-key.sh` | create-if-absent + backup export | `--dry-run` (zero Keychain) / `--print-public` |
+| `make-appcast.sh` | Sparkle `generate_appcast` (EdDSA) | `--dry-run` emits a **sample** `appcast.xml` with a placeholder signature |
+
+```sh
+# 0. Karaoke separation model — ships in every release; there is no App Store
+#    channel to skip it for.
+#    Downloads the pinned checkpoint, converts it to Core ML MLProgram fp16, and
+#    writes MelBandRoformer.mlpackage + model-manifest.json into
+#    macOS/Resources/SeparationModel/. Exits non-zero if conversion fails.
+tools/separation/fetch-and-convert-model.sh
+
+# 1. Build a Release .app. --app-version is what stamps the bundle; omit it and
+#    you ship a 1.0 (1) bundle Sparkle will never offer as an update.
+scripts/build-macamp.sh --release --app-version 1.2.3    # -> build/MacAMP.app
+APP="build/MacAMP.app"
+#    (or drive xcodebuild yourself — pass BOTH settings, or you get 1.0 (1):)
+# DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+#   xcodebuild -workspace MacAMP.xcworkspace -scheme macampMac \
+#     -configuration Release -archivePath build/MacAMP.xcarchive archive \
+#     MARKETING_VERSION=1.2.3 CURRENT_PROJECT_VERSION="$(git rev-list --count HEAD)"
+
+# 2a. Developer ID: sign inside-out with Hardened Runtime + secure timestamp.
+export DEVELOPER_ID_APPLICATION="Developer ID Application: Jane Roe (TEAMID1234)"
+scripts/codesign-app.sh --app "$APP"
+# 2b. …or credential-free ad-hoc (what CI and the default release.sh path do):
+# codesign --force --deep --sign - "$APP"
+
+# 3. Package the DMG.
+scripts/package-dmg.sh --app "$APP" --output dist/MacAMP-1.2.3.dmg
+
+# 4. Notarize + staple (Developer ID only).
+export APPLE_ID="jane@example.com"
+export NOTARIZATION_TEAM_ID="TEAMID1234"
+export NOTARIZATION_APP_PASSWORD="abcd-efgh-ijkl-mnop"
+scripts/notarize.sh dist/MacAMP-1.2.3.dmg
+
+# 5. Retain the archive, then sign the appcast over the whole archive directory.
+mkdir -p dist/releases
+ditto dist/MacAMP-1.2.3.dmg dist/releases/MacAMP-1.2.3.dmg
+scripts/make-appcast.sh --archives dist/releases --output dist/appcast.xml
+# (the default --download-url-prefix is https://downloads.macamp.si/releases/)
+# (add --channel beta to tag the items for the beta channel)
+
+# 6. Upload to R2: archives first, the appcast last (see scripts/publish-r2.sh).
+scripts/publish-r2.sh --version 1.2.3
+```
+
+### Why inside-out signing matters
+
+`codesign-app.sh` signs **every** bundled Mach-O before the app bundle, in phases:
+
+1. Loose dylibs — **projectM** (`libprojectM-4.4.dylib`, LGPL, embedded in
+   `Contents/Frameworks/`).
+2. Nested framework helpers — Sparkle's XPC services (`Downloader.xpc`,
+   `Installer.xpc`), its `Autoupdate` helper, and `Updater.app`.
+3. Framework bundles — the **SFBAudioEngine codec frameworks** (FLAC, LAME,
+   mpg123, Ogg, Opus, sndfile, Vorbis, WavPack, Musepack, TTA, …), **GRDB**, and
+   **Sparkle**.
+4. App extensions (`Contents/PlugIns/*.appex`) — **currently matches nothing**:
+   MacAMP ships no app extensions since the widget target was removed. The phase
+   is kept so a future extension is signed correctly by construction.
+5. The `.app` bundle itself, sealed last.
+
+If any nested component is unsigned — or signed *after* its container — the notary
+service rejects the whole submission. The Hardened Runtime (`--options runtime`)
+and a secure `--timestamp` are both mandatory for notarization.
+
+---
+
+## 5. Gatekeeper: what users actually see
+
+### ad-hoc-signed builds (the credential-free default, and CI)
+
+An ad-hoc signature has no Developer ID for Gatekeeper to evaluate, so
+**`spctl --assess` rejecting the bundle is the correct outcome** — `release.sh`
+prints an explicit `spctl: EXPECTED (ad-hoc — users need Open Anyway)` banner and
+does **not** treat it as a pipeline failure.
+
+On macOS Sequoia the first launch reports the app as **"damaged"**, and
+right-click → Open **no longer bypasses it**. The user must allow it once:
+
+1. Try to open **MacAMP** (the warning appears — click **Done**).
+2. Open **System Settings → Privacy & Security**.
+3. Scroll to **Security**; a line reads *"MacAMP was blocked from use because it is
+   not from an identified developer."*
+4. Click **Open Anyway**, then authenticate.
+5. Open MacAMP again and confirm at the final prompt.
+
+macOS remembers the decision; subsequent launches are silent. `release.sh` writes
+this exact instruction into the generated `dist/RELEASE-NOTES-<v>.md`, so it ships
+with the download. The end-user version of this walkthrough lives in
+[install guide](./install).
+
+### Developer-ID + notarized builds
+
+No prompt at all. `spctl` rejecting a Developer-ID-signed bundle **is** a real
+failure and `release.sh` exits 8 on it.
+
+### Local dev builds and TCC folder grants
+
+macOS keys folder grants (Downloads/Desktop/Documents/external volumes) to the
+app's **code-signing identity**. `CODE_SIGNING_ALLOWED=NO` builds have no identity,
+so grants never stick; the project's ad-hoc default changes identity on every
+rebuild, so the prompt returns after each build. Post-sign local builds with your
+personal certificate to make grants persist:
+
+```sh
+codesign --force --deep --preserve-metadata=entitlements \
+  --sign "Apple Development" build/MacAMP.app
+```
+
+---
+
+## 6. CI
+
+`.github/workflows/ci.yml` (mirrored by `.gitlab-ci.yml`) runs a tag-gated
+**`release`** job on every `v*` tag, after the eleven base jobs pass. The CI release
+first fetches and converts the karaoke model (this step must precede `tuist generate`
+— the resource glob is evaluated at generate time), then builds with
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=NO` (required because `libprojectM-4.4.dylib` is
+arm64-only), ad-hoc signs with `codesign --force --deep --sign -`, packages a
+`.dmg`, asserts the bundle contains both `MelBandRoformer.mlmodelc` and
+`libprojectM-4.4.dylib`, and publishes a GitHub Release carrying the `.dmg` plus
+the `Package.resolved` dependency snapshot. Notarization is deferred.
+
+Before signing, both CI release paths and `scripts/release.sh` validate the built
+app's bundle identifier and Sparkle feed URL. The development values in
+`macOS/Project.swift` are placeholders; choose the production identity and HTTPS
+feed before tagging a release. The gate rejects known placeholders and malformed
+values. It does not verify feed ownership or update delivery.
+
+A **commented-out** `notarize` job skeleton sits at the bottom of `ci.yml`. Base CI
+must never run live notarization or depend on Apple secrets, so it is disabled by
+default. To enable it:
+
+1. Configure the repository secrets `APPLE_ID`, `NOTARIZATION_TEAM_ID`,
+   `NOTARIZATION_APP_PASSWORD`, `DEVELOPER_ID_APPLICATION` (plus the Sparkle EdDSA
+   private key if you sign the appcast in CI).
+2. Uncomment the job. It is gated to tag pushes
+   (`if: startsWith(github.ref, 'refs/tags/v')`) and `needs:` the green
+   lint/test/portability jobs.
+3. Wire its steps to call the scripts (`codesign-app.sh` → `package-dmg.sh` →
+   `notarize.sh` → `make-appcast.sh`) rather than inlining raw `xcrun` calls.
+
+Validate the notary contract at any time — safe in unprivileged CI, exits 0 even
+when nothing is configured:
+
+```sh
+scripts/notarize.sh --check-config
+```
+
+---
+
+## 7. Verifying a release by hand
+
+`release.sh` stage [7] runs all of these for you, but they are worth knowing:
+
+```sh
+codesign -dv --verbose=4 "$APP"                      # adhoc, or the Developer ID CN
+codesign --verify --deep --strict --verbose=2 "$APP" # signature is intact
+spctl --assess --type execute --verbose=4 "$APP"     # Gatekeeper verdict
+hdiutil verify dist/MacAMP-1.2.3.dmg                 # image checksum
+xcrun stapler validate dist/MacAMP-1.2.3.dmg         # ticket is stapled (Dev ID only)
+test -d "$APP/Contents/Resources/MelBandRoformer.mlmodelc"   # karaoke really shipped
+```
+
+For a **Developer-ID** release all of these must pass before publishing. For an
+**ad-hoc** release, `spctl` and `stapler validate` are expected to fail — that is
+the documented, intentional trade-off of shipping without an Apple account.
+
+---
+
+## Related
+
+- **Project overview / build & test:** `README.md` (repo root)
+- **End-user install & update guide:** [Install, First Open, and Updates](./install)
+- **Open-source acknowledgments / licensing:** [Acknowledgments](./acknowledgments)
+- **Karaoke separation ADR:** `Spikes/ADR-karaoke-separation.md` (repo)
+- **Engineering contract & invariants:** `.opencode/skills/macamp/SKILL.md` (repo)

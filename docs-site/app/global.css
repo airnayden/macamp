@@ -1,0 +1,711 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+/* ──────────────────────────────────────────────────────────────
+   MacAMP theme — the same synthwave palette as the app's skin and
+   the marketing site (canvas #0D0221 · accent #FF2975 · cyan #4DE2F0).
+   The site is dark-only (forced in components/provider.tsx), so the
+   light and dark token sets are identical.
+   ────────────────────────────────────────────────────────────── */
+:root {
+  --mac-night: #05010c;
+  --mac-canvas: #0d0221;
+  --mac-pink: #ff2975;
+  --mac-magenta: #f222ff;
+  --mac-violet: #8c1eff;
+  --mac-cyan: #4de2f0;
+  --mac-orange: #ff901f;
+  --mac-sun: #ffd319;
+  --mac-text: #f4eeff;
+  --mac-muted: #b9abd8;
+  --mac-dim: #8f80b0;
+  --mac-line: rgb(255 255 255 / 0.08);
+  --mac-line-strong: rgb(255 255 255 / 0.15);
+  --mac-grad-neon: linear-gradient(90deg, var(--mac-pink), var(--mac-magenta) 55%, var(--mac-cyan));
+  --mac-grad-sun: linear-gradient(180deg, var(--mac-sun), var(--mac-orange) 38%, var(--mac-pink) 68%, var(--mac-magenta));
+  --mac-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  color-scheme: dark;
+}
+
+:root,
+.dark {
+  --color-fd-background: #07020f;
+  --color-fd-foreground: var(--mac-text);
+  --color-fd-muted: #140829;
+  --color-fd-muted-foreground: var(--mac-muted);
+  --color-fd-popover: #110526;
+  --color-fd-popover-foreground: var(--mac-text);
+  --color-fd-card: #0b0320;
+  --color-fd-card-foreground: var(--mac-text);
+  --color-fd-border: rgb(255 255 255 / 0.09);
+  --color-fd-primary: var(--mac-pink);
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-secondary: #180a30;
+  --color-fd-secondary-foreground: var(--mac-text);
+  --color-fd-accent: rgb(255 41 117 / 0.14);
+  --color-fd-accent-foreground: #ffffff;
+  --color-fd-ring: var(--mac-pink);
+  --color-fd-overlay: rgb(5 1 12 / 0.72);
+  --color-fd-info: var(--mac-cyan);
+  --color-fd-warning: var(--mac-sun);
+  --color-fd-error: #ff4f6d;
+  --color-fd-success: #4de2b0;
+  --color-fd-idea: var(--mac-orange);
+}
+
+.dark #nd-sidebar {
+  --color-fd-muted: #170a2e;
+  --color-fd-secondary: #1a0b33;
+  --color-fd-muted-foreground: var(--mac-muted);
+}
+
+@theme inline {
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-code), ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+html {
+  scrollbar-gutter: stable;
+  background: var(--mac-night);
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+body {
+  background:
+    radial-gradient(60rem 30rem at 85% -8rem, rgb(255 41 117 / 0.13), transparent 70%),
+    radial-gradient(50rem 28rem at 10% -10rem, rgb(140 30 255 / 0.16), transparent 70%),
+    var(--color-fd-background);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+::selection {
+  background: var(--mac-pink);
+  color: #fff;
+}
+
+:focus-visible {
+  outline-color: var(--mac-cyan);
+}
+
+/* ── Brand ─────────────────────────────────────────────────── */
+.mac-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.mac-logo-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  filter: drop-shadow(0 0 9px rgb(255 41 117 / 0.55));
+}
+.mac-logo-word {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-stretch: 125%;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+.mac-logo-word span {
+  background: var(--mac-grad-neon);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.mac-logo-tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-family: var(--font-code);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mac-cyan);
+  box-shadow: inset 0 0 0 1px rgb(77 226 240 / 0.45);
+}
+
+/* Sidebar “Get MacAMP” card */
+.mac-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 11px 12px;
+  overflow: hidden;
+  border-radius: 14px;
+  isolation: isolate;
+  background: linear-gradient(135deg, rgb(255 41 117 / 0.18), rgb(140 30 255 / 0.18));
+  box-shadow: inset 0 0 0 1px rgb(255 41 117 / 0.32);
+  transition:
+    box-shadow 0.3s,
+    transform 0.3s var(--mac-ease);
+}
+.mac-banner:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 41 117 / 0.6),
+    0 10px 30px -12px rgb(242 34 255 / 0.7);
+}
+.mac-banner-sun {
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--mac-grad-sun);
+  -webkit-mask-image: linear-gradient(#000 0 52%, transparent 52% 58%, #000 58% 70%, transparent 70% 76%, #000 76% 86%, transparent 86%);
+  mask-image: linear-gradient(#000 0 52%, transparent 52% 58%, #000 58% 70%, transparent 70% 76%, #000 76% 86%, transparent 86%);
+  filter: drop-shadow(0 0 8px rgb(255 41 117 / 0.8));
+}
+.mac-banner-text {
+  display: grid;
+  line-height: 1.2;
+}
+.mac-banner-text strong {
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: #fff;
+}
+.mac-banner-text small {
+  font-size: 0.72rem;
+  color: var(--mac-muted);
+}
+.mac-banner-icon {
+  margin-left: auto;
+  color: var(--mac-pink);
+}
+
+.mac-side-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 4px 8px 2px;
+  font-size: 0.78rem;
+}
+.mac-side-foot a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--mac-dim);
+  transition: color 0.2s;
+}
+.mac-side-foot a:hover {
+  color: #fff;
+}
+
+/* ── Sidebar ───────────────────────────────────────────────── */
+#nd-sidebar {
+  background: linear-gradient(180deg, rgb(16 5 36 / 0.92), rgb(8 2 18 / 0.96));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+#nd-sidebar a[data-active] {
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+#nd-sidebar a[data-active='false']:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 0.05);
+}
+#nd-sidebar a[data-active='true'] {
+  color: #fff;
+  font-weight: 550;
+  background: linear-gradient(90deg, rgb(255 41 117 / 0.22), rgb(255 41 117 / 0.03));
+}
+#nd-sidebar a[data-active='true']::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--mac-pink);
+  box-shadow: 0 0 12px var(--mac-pink);
+}
+/* Section separators (“Project”) */
+#nd-sidebar p:not(.mac-banner *) {
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mac-dim);
+}
+
+/* Mobile top bar */
+#nd-subnav {
+  background: rgb(8 2 20 / 0.82);
+  backdrop-filter: saturate(160%) blur(16px);
+  -webkit-backdrop-filter: saturate(160%) blur(16px);
+}
+
+/* ── Page ──────────────────────────────────────────────────── */
+#nd-page {
+  position: relative;
+  isolation: isolate;
+}
+/* Neon horizon behind the title: a glow plus a faint perspective grid. */
+#nd-page::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0 -10% auto;
+  height: 340px;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 70% at 70% 0%, rgb(255 41 117 / 0.16), transparent 70%),
+    radial-gradient(35% 60% at 20% 10%, rgb(140 30 255 / 0.18), transparent 70%);
+}
+#nd-page::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 120px -20% auto;
+  height: 260px;
+  pointer-events: none;
+  background-image:
+    linear-gradient(90deg, rgb(255 41 117 / 0.16) 1px, transparent 1px),
+    linear-gradient(0deg, rgb(242 34 255 / 0.12) 1px, transparent 1px);
+  background-size: 56px 56px;
+  transform: perspective(420px) rotateX(68deg);
+  transform-origin: 50% 0;
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 75%);
+  mask-image: linear-gradient(180deg, #000, transparent 75%);
+}
+
+/* Title + description */
+#nd-page > h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-stretch: 115%;
+  font-size: clamp(2rem, 4.2vw, 3rem);
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  color: #fff;
+}
+#nd-page > h1 + p {
+  font-size: 1.12rem;
+  line-height: 1.6;
+  color: #d9cff0;
+}
+#nd-page > h1 + p::after {
+  content: '';
+  display: block;
+  width: 72px;
+  height: 2px;
+  margin-top: 22px;
+  border-radius: 2px;
+  background: var(--mac-grad-neon);
+  box-shadow: 0 0 14px rgb(255 41 117 / 0.8);
+}
+
+/* ── Prose ─────────────────────────────────────────────────── */
+#nd-page .prose {
+  --tw-prose-body: #ddd3f2;
+  --tw-prose-headings: #fff;
+  --tw-prose-bold: #fff;
+  --tw-prose-links: var(--mac-cyan);
+  --tw-prose-counters: var(--mac-pink);
+  --tw-prose-bullets: var(--mac-pink);
+  --tw-prose-hr: var(--mac-line-strong);
+  --tw-prose-quotes: #fff;
+  --tw-prose-quote-borders: var(--mac-pink);
+  --tw-prose-code: var(--mac-cyan);
+  --tw-prose-th-borders: var(--mac-line-strong);
+  --tw-prose-td-borders: var(--mac-line);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+#nd-page .prose :where(h2, h3, h4) {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+  color: #fff;
+}
+#nd-page .prose h2 {
+  font-weight: 800;
+  font-stretch: 112%;
+  font-size: 1.65rem;
+  margin-top: 3.2rem;
+}
+#nd-page .prose h3 {
+  font-weight: 700;
+  font-stretch: 106%;
+  font-size: 1.22rem;
+}
+#nd-page .prose h4 {
+  font-weight: 700;
+  font-size: 1.04rem;
+}
+/* Heading anchor icons */
+#nd-page .prose :where(h2, h3, h4) a svg {
+  color: var(--mac-pink);
+}
+#nd-page .prose a:not([data-card]):not(:has(> h2, > h3)) {
+  text-decoration-color: rgb(77 226 240 / 0.45);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.2s;
+}
+#nd-page .prose a:not([data-card]):hover {
+  text-decoration-color: var(--mac-cyan);
+}
+#nd-page .prose :not(pre) > code {
+  padding: 0.12em 0.45em;
+  border: 0;
+  border-radius: 6px;
+  font-size: 0.86em;
+  color: var(--mac-cyan);
+  background: rgb(77 226 240 / 0.09);
+}
+#nd-page .prose blockquote {
+  border-inline-start-width: 3px;
+  font-style: normal;
+  color: #e9e2fb;
+  background: linear-gradient(90deg, rgb(255 41 117 / 0.08), transparent 70%);
+  border-radius: 0 12px 12px 0;
+  padding: 0.6rem 1.1rem;
+}
+#nd-page .prose blockquote p::before,
+#nd-page .prose blockquote p::after {
+  content: none;
+}
+#nd-page .prose hr {
+  border: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--mac-line-strong), transparent);
+}
+
+/* Tables */
+#nd-page .prose table {
+  font-size: 0.93rem;
+}
+#nd-page .prose thead th {
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mac-dim);
+}
+#nd-page .prose tbody td:first-child {
+  color: #fff;
+}
+#nd-page .prose tbody tr {
+  transition: background-color 0.2s;
+}
+#nd-page .prose tbody tr:hover {
+  background: rgb(255 255 255 / 0.025);
+}
+
+/* Screenshots */
+#nd-page .prose img {
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.1),
+    0 30px 60px -28px rgb(0 0 0 / 0.9),
+    0 0 70px -24px rgb(242 34 255 / 0.55);
+}
+#nd-page img[src^='/assets/ios-'] {
+  @apply mx-auto h-auto w-full max-w-xs;
+  border-radius: 28px;
+}
+
+/* Code blocks */
+#nd-page figure.shiki,
+#nd-page .prose pre {
+  background: #0a0418;
+}
+#nd-page figure.shiki {
+  border-color: var(--mac-line-strong);
+  box-shadow: 0 20px 50px -30px rgb(242 34 255 / 0.4);
+}
+
+/* Cards (guide home). Heading anchors also carry data-card, hence the :not(). */
+#nd-page a[data-card]:not(:is(h1, h2, h3, h4, h5, h6) > a) {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.045), rgb(255 255 255 / 0.015));
+  transition:
+    border-color 0.3s,
+    box-shadow 0.3s,
+    transform 0.3s var(--mac-ease);
+}
+#nd-page a[data-card]:not(:is(h1, h2, h3, h4, h5, h6) > a):hover {
+  transform: translateY(-2px);
+  border-color: rgb(255 41 117 / 0.45);
+  background: linear-gradient(180deg, rgb(255 41 117 / 0.08), rgb(255 255 255 / 0.015));
+  box-shadow: 0 20px 44px -24px rgb(242 34 255 / 0.65);
+}
+#nd-page a[data-card]:not(:is(h1, h2, h3, h4, h5, h6) > a) svg {
+  color: var(--mac-pink);
+}
+
+/* ── Table of contents ─────────────────────────────────────── */
+#toc-title {
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mac-dim);
+}
+#nd-toc a[data-active='true'] {
+  color: #fff;
+}
+#nd-toc a:hover {
+  color: #fff;
+}
+
+/* ── Search dialog ─────────────────────────────────────────── */
+[role='dialog'] {
+  --color-fd-popover: #12062a;
+}
+
+/* ── Guide home (content/docs/index.mdx) ───────────────────── */
+.mac-hero {
+  position: relative;
+  margin: 0.5rem 0 2.5rem;
+  padding: 2rem 1.75rem 1.75rem;
+  overflow: hidden;
+  border-radius: 22px;
+  isolation: isolate;
+  background:
+    radial-gradient(70% 90% at 100% 0%, rgb(255 41 117 / 0.25), transparent 65%),
+    radial-gradient(60% 90% at 0% 100%, rgb(140 30 255 / 0.3), transparent 70%),
+    linear-gradient(180deg, #15062e, #0a0318);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 41 117 / 0.3),
+    0 30px 70px -40px rgb(242 34 255 / 0.8);
+}
+.mac-hero::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 55% -10% -40%;
+  background-image:
+    linear-gradient(90deg, rgb(255 41 117 / 0.35) 1px, transparent 1px),
+    linear-gradient(0deg, rgb(242 34 255 / 0.3) 1px, transparent 1px);
+  background-size: 44px 44px;
+  transform: perspective(300px) rotateX(65deg);
+  transform-origin: 50% 0;
+  -webkit-mask-image: linear-gradient(180deg, #000 10%, transparent 80%);
+  mask-image: linear-gradient(180deg, #000 10%, transparent 80%);
+}
+.mac-hero-sun {
+  position: absolute;
+  z-index: -1;
+  right: 8%;
+  top: 18%;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: var(--mac-grad-sun);
+  -webkit-mask-image: linear-gradient(#000 0 50%, transparent 50% 55%, #000 55% 66%, transparent 66% 72%, #000 72% 81%, transparent 81% 88%, #000 88% 93%, transparent 93%);
+  mask-image: linear-gradient(#000 0 50%, transparent 50% 55%, #000 55% 66%, transparent 66% 72%, #000 72% 81%, transparent 81% 88%, #000 88% 93%, transparent 93%);
+  filter: drop-shadow(0 0 30px rgb(255 41 117 / 0.8));
+  opacity: 0.9;
+}
+.mac-hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 !important;
+  font-family: var(--font-code);
+  font-size: 0.72rem !important;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--mac-cyan) !important;
+}
+.mac-hero-kicker::before {
+  content: '';
+  width: 26px;
+  height: 1px;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+.mac-hero-title {
+  margin: 0.7rem 0 0 !important;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-stretch: 122%;
+  font-size: clamp(1.9rem, 4vw, 2.7rem) !important;
+  line-height: 1 !important;
+  letter-spacing: -0.03em;
+  color: #fff !important;
+  max-width: 14ch;
+}
+.mac-hero-script {
+  display: block;
+  margin-top: 0.08em;
+  font-family: var(--font-script);
+  font-weight: 400;
+  font-stretch: normal;
+  font-size: 1.15em;
+  letter-spacing: 0;
+  transform: rotate(-4deg);
+  transform-origin: left;
+  text-shadow:
+    0 0 4px #fff,
+    0 0 12px var(--mac-pink),
+    0 0 28px var(--mac-pink),
+    0 0 52px var(--mac-magenta);
+}
+.mac-hero-text {
+  max-width: 46ch;
+  margin: 1.1rem 0 0 !important;
+  color: #e3daf7 !important;
+}
+.mac-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 1.4rem;
+}
+.mac-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-stretch: 108%;
+  font-size: 0.88rem;
+  text-decoration: none !important;
+  transition:
+    transform 0.3s var(--mac-ease),
+    box-shadow 0.3s;
+}
+.mac-btn-primary {
+  color: #fff !important;
+  background: linear-gradient(180deg, #ff4f90, var(--mac-pink) 55%, #e0145f);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    0 0 0 1px rgb(255 41 117 / 0.6),
+    0 10px 26px -8px rgb(255 41 117 / 0.8);
+}
+.mac-btn-ghost {
+  color: #fff !important;
+  background: rgb(255 255 255 / 0.06);
+  box-shadow: inset 0 0 0 1px var(--mac-line-strong);
+}
+.mac-btn:hover {
+  transform: translateY(-1px);
+}
+@media (max-width: 640px) {
+  .mac-hero {
+    padding: 1.5rem 1.25rem 1.4rem;
+  }
+  .mac-hero-sun {
+    width: 96px;
+    height: 96px;
+    right: -14px;
+    top: 10px;
+    opacity: 0.55;
+  }
+}
+
+/* Root redirect page */
+.mac-redirect h1 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-stretch: 122%;
+}
+
+/* Section cards on the guide home */
+#nd-page .mac-cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-block: 1rem 0.5rem;
+}
+#nd-page .mac-cards > :last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+@media (max-width: 640px) {
+  #nd-page .mac-cards {
+    grid-template-columns: 1fr;
+  }
+}
+#nd-page a[data-card]:not(:is(h1, h2, h3, h4, h5, h6) > a) {
+  padding: 1.1rem 1.15rem 1.15rem;
+  border-radius: 16px;
+}
+#nd-page a[data-card]:not(:is(h1, h2, h3, h4, h5, h6) > a) > div:first-child {
+  margin-bottom: 0.8rem;
+  padding: 8px;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--mac-pink), var(--mac-violet));
+  box-shadow: 0 8px 20px -6px rgb(255 41 117 / 0.7);
+}
+#nd-page a[data-card]:not(:is(h1, h2, h3, h4, h5, h6) > a) > div:first-child svg {
+  color: #fff;
+}
+#nd-page a[data-card]:not(:is(h1, h2, h3, h4, h5, h6) > a) h3 {
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  color: #fff;
+}
+
+/* Sidebar icon row (GitHub): no box, just the icon */
+#nd-sidebar div.border:has(> a[href*='github']) {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+/* Retina crops of small windows/sheets: show at their natural point size, centred. */
+#nd-page img:is(
+    [src$='/mac-mini-player.png'],
+    [src$='/mac-lyrics-panel.png']
+  ) {
+  max-width: 320px;
+  margin-inline: auto;
+}
+#nd-page img:is(
+    [src$='/mac-profile-pin.png'],
+    [src$='/mac-downloads-paste.png'],
+    [src$='/mac-downloads-playlist.png']
+  ) {
+  max-width: 460px;
+  margin-inline: auto;
+}
+#nd-page img:is([src$='/mac-eq-panel.png'], [src$='/mac-prefs-external-access.png']) {
+  max-width: 640px;
+  margin-inline: auto;
+}
+#nd-page img:is([src$='/mac-signal-path.png'], [src$='/mac-right-panel-tags.png'], [src$='/mac-right-panel-stats.png']) {
+  max-width: 340px;
+  margin-inline: auto;
+}
+#nd-page img:is([src$='/mac-organize-menu.png'], [src$='/mac-visualizer-modes.png']) {
+  max-width: 520px;
+  margin-inline: auto;
+}
+#nd-page img:is([src$='/mac-prefs-intelligence-providers.png'], [src$='/mac-prefs-intelligence-no-provider.png'], [src$='/mac-prefs-intelligence.png']) {
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.mac-side-credit {
+  flex-basis: 100%;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: var(--mac-dim);
+}
+.mac-side-credit a {
+  display: inline;
+  color: var(--mac-muted);
+}

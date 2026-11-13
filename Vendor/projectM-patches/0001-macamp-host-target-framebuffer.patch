@@ -1,0 +1,30 @@
+diff --git a/src/libprojectM/ProjectM.cpp b/src/libprojectM/ProjectM.cpp
+index ae9390e..e9cdb04 100644
+--- a/src/libprojectM/ProjectM.cpp
++++ b/src/libprojectM/ProjectM.cpp
+@@ -98,6 +98,14 @@ void ProjectM::RenderFrame()
+         return;
+     }
+ 
++    // MacAMP patch (backport of v4.2 host-FBO behavior): capture the draw
++    // framebuffer the host bound on entry, so the final composite targets it
++    // instead of a hardcoded 0. Identical to upstream when the host binds 0
++    // (e.g. an NSOpenGLView drawable); also enables offscreen/headless capture
++    // by binding a complete application FBO before calling render.
++    GLint macampHostDrawFbo = 0;
++    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &macampHostDrawFbo);
++
+     // Update FPS and other timer values.
+     m_timeKeeper->UpdateTimers();
+ 
+@@ -166,8 +174,8 @@ void ProjectM::RenderFrame()
+     // ToDo: Call the to-be-implemented render method in Renderer
+     m_activePreset->RenderFrame(audioData, renderContext);
+ 
+-    // ToDo: Allow external apps to provide a custom target framebuffer.
+-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
++    // MacAMP patch: composite to the host-bound draw framebuffer (see capture above).
++    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, macampHostDrawFbo);
+ 
+     if (m_transition != nullptr && m_transitioningPreset != nullptr)
+     {

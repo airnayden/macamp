@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  MacAMP iOS privacy manifest.
+
+	  MacAMP is an offline, on-device music player. It does NOT track users, does
+	  NOT contain advertising or third-party analytics SDKs, and does NOT collect
+	  or transmit any data off the device. Music files are read only from
+	  locations the person explicitly grants via the document picker
+	  (security-scoped bookmarks). The optional LRCLIB lyrics fetch is off by
+	  default and, when enabled, sends only a track title/artist query — it is a
+	  user-initiated network request, not data collection.
+
+	  Required-reason APIs below reflect actual code usage:
+	    * File timestamp: the library scanner reads each file's modification date
+	      via FileManager.attributesOfItem to fingerprint/dedupe tracks
+	      (PlayerCore/Sources/Services/Scanner, Decoding/SFBDecoderProvider).
+	    * User defaults: app settings + state restoration use the app's own
+	      UserDefaults; the now-playing snapshot is written to the shared App
+	      Group suite so the widget can read it.
+	  Disk-space APIs are intentionally NOT declared (the app does not query
+	  available capacity or free space).
+	-->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- C617.1: timestamps/size/metadata of files inside the app or App Group container. -->
+				<string>C617.1</string>
+				<!-- 3B52.1: timestamps/metadata of files the user specifically granted access to (document picker). -->
+				<string>3B52.1</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- CA92.1: read/write information accessible only to the app itself (settings, state restoration). -->
+				<string>CA92.1</string>
+				<!-- 1C8F.1: read/write information shared with other apps in the same App Group (widget snapshot). -->
+				<string>1C8F.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

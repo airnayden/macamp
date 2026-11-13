@@ -1,0 +1,197 @@
+# GitLab CI — a mirror of .github/workflows/ci.yml's checks, for running the
+# same lint, test and guard jobs on a GitLab macOS runner.
+#
+# Same base jobs (lint, test-package, test-app, uitest-smoke, build-ios,
+# portability-guard, ios-portability, no-hardcoded-text, ai-network-boundary)
+# plus the docs build. Releases are NOT built here: they are produced and
+# published locally with `scripts/release.sh --version <v> --publish`, which
+# uploads to the Cloudflare R2 bucket behind downloads.macamp.si.
+
+stages:
+  - lint
+  - test
+  - guard
+
+default:
+  tags:
+    - macos
+
+variables:
+  DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+
+# ---------------------------------------------------------------------------
+# lint — SwiftFormat (lint mode) + SwiftLint (strict), tools pinned via Mint.
+# ---------------------------------------------------------------------------
+lint:
+  stage: lint
+  script:
+    - command -v mint >/dev/null 2>&1 || brew install mint
+    - mint bootstrap
+    - mint run swiftformat . --lint
+    - mint run swiftlint lint --strict
+
+# ---------------------------------------------------------------------------
+# test-package — build + test the PlayerCore SwiftPM package directly, then the
+# AIConnectorKit package. AIConnectorKit is a SEPARATE local package that depends
+# on PlayerCore (never the reverse), so a root `swift test` never sees it. The
+# `--target AIConnectorKit` build is the standalone-core proof: nothing from
+# PlayerCore or GRDB may enter it, which is what keeps the kit liftable into
+# another app. Only `AIConnectorBridge` may reach across.
+# ---------------------------------------------------------------------------
+test-package:
+  stage: test
+  script:
+    - swift build -c release
+    - swift test --no-parallel
+    - (cd AIConnectorKit && swift build --target AIConnectorKit)
+    - (cd AIConnectorKit && swift test)
+  cache:
+    key: "spm-$CI_COMMIT_REF_SLUG"
+    paths:
+      - .build
+      - AIConnectorKit/.build
+
+# ---------------------------------------------------------------------------
+# test-app — generate the Xcode workspace with Tuist and run the macOS tests.
+# ---------------------------------------------------------------------------
+test-app:
+  stage: test
+  script:
+    - command -v tuist >/dev/null 2>&1 || brew install tuist
+    - tuist install --force-resolved-versions
+    - tuist generate --no-open
+    - xcodebuild test
+      -workspace MacAMP.xcworkspace
+      -scheme macampMac
+      -destination 'platform=macOS,arch=arm64'
+      -derivedDataPath .build-l10n-macos
+      -skip-testing:macampMacUITests
+      SWIFT_EMIT_LOC_STRINGS=YES
+    - swift scripts/check-localization.swift . macOS .build-l10n-macos
+    - bash scripts/tests/localization-coverage.sh
+
+# ---------------------------------------------------------------------------
+# uitest-smoke — NON-REQUIRED XCUITest smoke for macampMac (allow_failure). The
+# host app's App-Group entitlement would demand a provisioning profile under
+# `xcodebuild test`; with no Apple team, the run strips entitlements + ad-hoc
+# signs at INVOCATION scope (per-run only — dev/release builds unchanged). Never
+# blocks the pipeline; not a dependency of `release`. Pairs with test-app's
+# -skip-testing above.
+# ---------------------------------------------------------------------------
+uitest-smoke:
+  stage: test
+  allow_failure: true
+  script:
+    - command -v tuist >/dev/null 2>&1 || brew install tuist
+    - tuist install --force-resolved-versions
+    - tuist generate --no-open
+    - xcodebuild test
+      -workspace MacAMP.xcworkspace
+      -scheme macampMac
+      -destination 'platform=macOS,arch=arm64'
+      -only-testing:macampMacUITests
+      CODE_SIGN_IDENTITY=-
+      CODE_SIGN_STYLE=Manual
+      CODE_SIGNING_REQUIRED=NO
+      CODE_SIGN_ENTITLEMENTS=
+
+# ---------------------------------------------------------------------------
+# build-ios — generate the Xcode workspace with Tuist and test macampiOS on
+# an installed Simulator. Catches app-shell failures outside PlayerCore.
+# ---------------------------------------------------------------------------
+build-ios:
+  stage: test
+  script:
+    - command -v tuist >/dev/null 2>&1 || brew install tuist
+    - tuist install --force-resolved-versions
+    - tuist generate --no-open
+    - |
+      SIMULATOR_ID="$(bash scripts/ci-ios-simulator.sh)"
+      xcodebuild test \
+        -workspace MacAMP.xcworkspace \
+        -scheme macampiOS \
+        -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+        -derivedDataPath .build-l10n-ios \
+        CODE_SIGNING_ALLOWED=NO \
+        SWIFT_EMIT_LOC_STRINGS=YES
+    - swift scripts/check-localization.swift . iOS .build-l10n-ios
+
+# ---------------------------------------------------------------------------
+# portability-guard — HARD failure if PlayerCore imports AppKit/UIKit.
+# ---------------------------------------------------------------------------
+portability-guard:
+  stage: guard
+  script:
+    - ./scripts/check-playercore-portability.sh
+    # The surviving assertion of the retired oauth-linkage job (see that script's
+    # header for why the other two went). A pure grep, so it belongs in this cheap
+    # job rather than one that builds.
+    - ./scripts/check-ios-oauth-linkage.sh
+    # The downloader is the one feature that runs a third-party binary and fetches
+    # bytes off the public internet. Each power is confined to ONE named file
+    # (YtDlpProcessRunner / DownloadToolReleaseClient); this holds that line. A
+    # separate guard from ai-network-boundary on purpose — different homes,
+    # different invariant. Pure grep, so it belongs in this cheap job.
+    - ./scripts/check-downloader-boundary.sh
+
+# ---------------------------------------------------------------------------
+# ios-portability — prove PlayerCore still COMPILES for iOS (API-drift guard).
+# ---------------------------------------------------------------------------
+ios-portability:
+  stage: guard
+  script:
+    - xcodebuild build
+      -scheme PlayerCore-Package
+      -destination 'generic/platform=iOS Simulator'
+      -derivedDataPath .build-ios
+      -quiet
+    - cd AIConnectorKit
+    - xcodebuild build
+      -scheme AIConnectorKit
+      -destination 'generic/platform=iOS Simulator'
+      -derivedDataPath .build-ios
+      CODE_SIGNING_ALLOWED=NO
+      -quiet
+
+# ---------------------------------------------------------------------------
+# no-hardcoded-text — HARD failure if user-facing copy bypasses String Catalogs.
+# ---------------------------------------------------------------------------
+no-hardcoded-text:
+  stage: guard
+  script:
+    - ./scripts/check-hardcoded-strings.sh
+    # The guard above proves no copy is a BARE LITERAL. It cannot prove the keys
+    # a surface renders ever reach the catalog — an absent key falls back to its
+    # English `defaultValue` in all seven languages while every gate stays green.
+    # This closes that gap per surface (see the script's header for why neither a
+    # key-prefix audit nor a bare-symbol scan can).
+    - ./scripts/check-l10n-render-sites.sh macOS/Sources/Downloads
+
+# ---------------------------------------------------------------------------
+# ai-network-boundary — HARD failure if the AI surface touches URLSession
+# directly. Outbound calls may originate ONLY inside
+# AIConnectorKit/Sources/AIConnectorKit/; the assistant/insight services, the
+# shared view models, the macOS Intelligence panes and the bridge must reach the
+# network THROUGH a connector, or the kit's deadline, payload budget, consent
+# gate and error taxonomy are all bypassable. Pure source grep — no build, no
+# Xcode, no Tuist. Replaces the retired blanket "new modules => zero URLSession"
+# premise from .omo/plans/local-ai-playlists.md, which
+# Spikes/ADR-ai-provider-connectors.md reversed.
+# ---------------------------------------------------------------------------
+ai-network-boundary:
+  stage: guard
+  script:
+    - ./scripts/check-ai-network-boundary.sh
+
+# ---------------------------------------------------------------------------
+# docs — verify the Fumadocs static site builds cleanly on every push/MR.
+# macOS runners have Node via Homebrew; pin to 22 and verify before building.
+# ---------------------------------------------------------------------------
+docs:
+  stage: guard
+  allow_failure: true
+  script:
+    - node --version | grep -E '^v(2[2-9]|[3-9][0-9])' || brew install node@22 && brew link node@22 --force --overwrite
+    - node --version
+    - npm ci --prefix docs-site
+    - npm run build --prefix docs-site

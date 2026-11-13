@@ -1,0 +1,37 @@
+MacAMP
+Copyright (C) 2026 Nayden Panchev
+
+  Author:  Nayden Panchev
+           https://drpanchev.com · https://dently.si · https://app.dentist
+  Website: https://macamp.si
+  Source:  https://github.com/airnayden/macamp
+
+MacAMP is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, version 3 (see LICENSE). It is distributed in the hope that it will
+be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ADDITIONAL TERMS (GNU GPL version 3, section 7)
+
+The following additional terms apply to MacAMP and to every work based on it:
+
+1. Attribution (section 7(b)). You must preserve this NOTICE file and the
+   copyright and author notices above. Any work based on MacAMP that you
+   convey, in source or binary form, must state that it is based on MacAMP by
+   Nayden Panchev and link to https://github.com/airnayden/macamp. In works
+   with an interactive user interface, this attribution must appear in the
+   Appropriate Legal Notices (for example an About, Credits or Acknowledgments
+   screen).
+
+2. Name and logo (section 7(e)). This license grants no rights to use the name
+   "MacAMP", the MacAMP logo or app icon, or the macamp.si domain. Modified
+   versions must use a different name and icon, and must not suggest that they
+   are the official MacAMP or endorsed by its author.
+
+THIRD-PARTY COMPONENTS
+
+Third-party software included in or used by MacAMP is licensed under its own
+terms; see docs-site/content/docs/acknowledgments.mdx. The karaoke separation
+model weights are not part of this repository and are not covered by this
+license.

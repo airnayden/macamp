@@ -1,0 +1,25 @@
+{
+  "title": "User Guide",
+  "root": true,
+  "pages": [
+    "index",
+    "install",
+    "importing",
+    "playback",
+    "now-playing-surfaces",
+    "playlists",
+    "equalizer",
+    "visualizer",
+    "lyrics",
+    "karaoke",
+    "downloads",
+    "intelligence",
+    "external-access",
+    "stats",
+    "settings",
+    "troubleshooting",
+    "---Project---",
+    "distribution",
+    "acknowledgments"
+  ]
+}

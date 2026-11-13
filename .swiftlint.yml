@@ -1,0 +1,49 @@
+# MacAMP SwiftLint configuration
+# Safety opt-ins enabled; style rules owned by SwiftFormat are disabled to avoid conflicts.
+
+opt_in_rules:
+  - force_unwrapping # force_try & force_cast are SwiftLint defaults (already enabled)
+
+# `id` (record PK) and `db` (GRDB closure) idioms; `id` must be listed because a
+# custom `excluded` list overrides SwiftLint's built-in `id` allowance.
+identifier_name:
+  excluded:
+    - id
+    - db
+
+# Style rules that SwiftFormat owns — disabled here to avoid double-reporting / fights
+disabled_rules:
+  - trailing_comma
+  - opening_brace
+  - trailing_whitespace
+  - vertical_whitespace
+  - comma
+  - colon
+  - return_arrow_whitespace
+  - statement_position
+  - line_length # SwiftFormat enforces width via --maxwidth 120
+
+excluded:
+  - .build
+  - DerivedData
+  - Tuist/.build
+  # `excluded` paths are anchored at the config's directory, so the root `.build`
+  # entry above does NOT cover a nested one. Without this, SwiftLint walks the 519
+  # vendored dependency sources under AIConnectorKit/.build and SourceKit dies with
+  # SIGBUS (exit 138) before a single project file is linted. Nested .swiftlint.yml
+  # files cannot help — SwiftLint ignores `excluded`/`included` in nested configs.
+  - AIConnectorKit/.build
+  # Local derived-data tree (git-ignored) written by
+  # `xcodebuild -derivedDataPath .build-ios`. It contains Xcode-GENERATED sources
+  # such as GeneratedAssetSymbols.swift, which SwiftLint would otherwise report as real
+  # violations nobody can fix. Not covered by the `.build`/`DerivedData` entries above —
+  # those match those exact directory names, not this sibling.
+  - .build-ios
+  - .build-l10n-macos
+  - .build-l10n-ios
+  # OhMyOpenCode agent working data (git-ignored): evidence artifacts from past task
+  # runs, including throwaway Swift snippets. Not product code — never lint it.
+  - .omo
+  - Derived
+  - Spikes # throwaway Phase 0 audio spike — committed for ADR reference only, not product code
+  - macOS/ProjectM # optional macOS-only projectM backend (vendored LGPL C++ interop, out of App Store, off critical path)

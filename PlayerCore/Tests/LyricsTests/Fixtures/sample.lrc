@@ -1,0 +1,10 @@
+[ar:Test Artist]
+[ti:Test Song]
+[al:Test Album]
+[by:MacAMP]
+[offset:+500]
+
+[00:10.00]First line
+[00:12.50]Second line
+[00:15.00]<00:15.00>Third <00:16.20>line <00:17.40>words
+[00:20.00]Last line

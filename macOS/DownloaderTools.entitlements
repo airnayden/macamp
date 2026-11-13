@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Entitlements for the BUNDLED DOWNLOADER TOOLS ONLY — never for the app
+	  itself. That is ffmpeg and ffprobe in Contents/MacOS/, plus every Mach-O
+	  in the yt-dlp one-directory tree at Contents/Resources/yt-dlp/ (the
+	  `yt-dlp_macos` launcher and the 106 dylib/so files under `_internal/`).
+	  scripts/codesign-app.sh phase 0 applies this file; macampMac.entitlements
+	  stays the app's own, and nothing here leaks into it.
+
+	  NO DOUBLE HYPHEN MAY APPEAR IN THIS COMMENT. XML forbids it, and codesign
+	  parses entitlements with AMFI's strict parser, not with plutil's lenient
+	  one: `plutil -lint` reports OK on a file containing one while
+	  `codesign` refuses it outright with
+
+	      Failed to parse entitlements: AMFIUnserializeXML: syntax error near line 19
+
+	  which fails EVERY tool signature in phase 0. This file shipped in exactly
+	  that state (the prose spelled the codesign flag with its leading hyphens)
+	  and the defect survived because ad-hoc releases never call
+	  codesign-app.sh at all. Spell flags without their hyphens here.
+
+	  com.apple.security.cs.disable-library-validation is LOAD-BEARING, not
+	  defensive. `yt-dlp_macos` is a PyInstaller build that dlopen()s a CPython
+	  runtime and a pile of `.so` extension modules at run time. In the
+	  one-directory shape those files live beside the launcher in `_internal/`
+	  and phase 0 re-signs every one of them with our own identity, so library
+	  validation would in principle be satisfied. The entitlement is kept
+	  anyway, for two reasons that are cheaper than the failure they prevent:
+
+	    * enumeration is a claim, not a guarantee. A single Mach-O phase 0
+	      failed to reach keeps its upstream ad-hoc signature, and library
+	      validation refuses any library not signed by the same Team ID as the
+	      main executable (or by Apple). The result is a code-signature kill at
+	      the first dlopen, whose only user-visible symptom is that every
+	      download fails.
+	    * it is a RELEASE-ONLY failure. Dev and CI builds are ad-hoc signed with
+	      no hardened runtime, so library validation is never armed and the tool
+	      runs fine — which is exactly why this has to be written down rather
+	      than found once Developer-ID signing is switched on.
+
+	  Scope: this weakens the loader policy for these helper processes and for
+	  nothing else. They are separate short-lived processes launched by the app,
+	  not code loaded INTO it, so the app's own hardened runtime is untouched.
+	  Apple's notarization service accepts this entitlement without a
+	  provisioning profile; no other exception (JIT, unsigned memory, DYLD
+	  variables) is requested, and none should be added without the same kind of
+	  measured reason.
+	-->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Direct distribution: NOT sandboxed. App Group only, for widget snapshot IPC. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.si.macamp.MacAMP</string>
+	</array>
+	<!--
+	  com.apple.security.network.client is harmless on this unsandboxed build
+	  (MacAMP is direct-distribution only, never App Store). It is declared here
+	  to document that the app makes outbound network connections (AI connector
+	  network calls via URLSession in AIConnectorKit), and so that any future
+	  sandboxing work starts with the correct entitlement already in place.
+	  See ADR: Spikes/ADR-ai-provider-connectors.md § (g) Known gaps.
+	-->
+	<key>com.apple.security.network.client</key>
+	<true/>
+</dict>
+</plist>

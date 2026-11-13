@@ -1,0 +1,53 @@
+---
+title: MacAMP User Guide
+description: Everything you need to know about MacAMP, the native music player for macOS, with an iPhone and iPad beta.
+---
+
+import {
+  Download, FolderInput, Play, MonitorSmartphone, ListMusic, SlidersHorizontal, AudioWaveform,
+  Quote, Mic, ArrowDownToLine, Sparkles, Plug, ChartColumn, Settings, LifeBuoy,
+} from 'lucide-react';
+
+<GuideHero />
+
+MacAMP is a music player for the music you own. Use this guide to import your library, build playlists, tune the sound and set up the extras. Screenshots show the app with an empty library or with example tracks; MacAMP comes without bundled music.
+
+## Getting started
+
+<Cards className="mac-cards">
+  <Card icon={<Download />} title="Install, first open and updates" href="/docs/install/" description="Requirements, getting past Gatekeeper, and how updates arrive." />
+  <Card icon={<FolderInput />} title="Importing music" href="/docs/importing/" description="Add folders on the Mac, or files and iCloud Drive on iPhone and iPad." />
+  <Card icon={<Play />} title="Playback, queue and transport" href="/docs/playback/" description="The player bar, the queue, gapless playback, shortcuts and the signal path." />
+  <Card icon={<MonitorSmartphone />} title="Now-playing surfaces" href="/docs/now-playing-surfaces/" description="Right panel, mini player, Control Center and the lock screen." />
+</Cards>
+
+## Your library
+
+<Cards className="mac-cards">
+  <Card icon={<ListMusic />} title="Playlists" href="/docs/playlists/" description="Regular and smart playlists, plus M3U and PLS import and export." />
+  <Card icon={<Quote />} title="Lyrics" href="/docs/lyrics/" description="Embedded, .lrc and online lyrics, synced line by line." />
+  <Card icon={<ChartColumn />} title="Listening stats" href="/docs/stats/" description="What gets recorded, the replay heatmap, and exporting your history." />
+</Cards>
+
+## Sound and extras
+
+<Cards className="mac-cards">
+  <Card icon={<SlidersHorizontal />} title="Equalizer and ReplayGain" href="/docs/equalizer/" description="Graphic and parametric EQ, AutoEq, crossfeed and loudness." />
+  <Card icon={<AudioWaveform />} title="Visualizer" href="/docs/visualizer/" description="The compact spectrum on the Mac and the visualizer sheet on iOS." />
+  <Card icon={<Mic />} title="Karaoke mode" href="/docs/karaoke/" description="On-device vocal removal, the render queue and the cache." />
+  <Card icon={<ArrowDownToLine />} title="Downloads" href="/docs/downloads/" description="Paste YouTube links or playlists and manage the queue." />
+</Cards>
+
+## AI and integrations
+
+<Cards className="mac-cards">
+  <Card icon={<Sparkles />} title="AI features" href="/docs/intelligence/" description="The assistant, providers, web suggestions and downloading missing songs." />
+  <Card icon={<Plug />} title="External access (MCP)" href="/docs/external-access/" description="Let AI apps on your Mac browse and control your library." />
+</Cards>
+
+## Reference
+
+<Cards className="mac-cards">
+  <Card icon={<Settings />} title="Settings and preferences" href="/docs/settings/" description="Every pane and switch, on macOS and iOS." />
+  <Card icon={<LifeBuoy />} title="Troubleshooting" href="/docs/troubleshooting/" description="Fixes for the most common problems." />
+</Cards>

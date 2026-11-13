@@ -1,0 +1,118 @@
+---
+title: Install, First Open, and Updates
+description: How to install MacAMP on macOS and iOS, how to get past Gatekeeper on the first launch, and how automatic updates work.
+---
+
+## macOS
+
+### Requirements
+
+- **macOS 14 (Sonoma) or later** for the app itself.
+- **A Mac with Apple silicon** (M1 or newer). Intel Macs aren't supported.
+- **macOS 15 (Sequoia) or later for Karaoke (vocal removal).** The on-device separation model needs an attention operation that doesn't exist before macOS 15; on macOS 14 Karaoke shows as *Unavailable* and everything else works normally.
+
+### Install from Terminal (one line)
+
+The quickest way, and it skips the Gatekeeper step below. Open **Terminal** and paste:
+
+```sh
+curl -fsSL https://downloads.macamp.si/install.sh | bash
+```
+
+The installer downloads the latest release from `downloads.macamp.si`, checks its SHA-256 checksum, copies **MacAMP.app** into **Applications** (replacing an older copy) and opens it. Nothing else on your Mac is touched. It's a short script you can [read first](https://github.com/airnayden/macamp/blob/main/scripts/install.sh). Run the same line again any time to reinstall.
+
+### Download and open the DMG
+
+1. Download the latest DMG from [macamp.si/download](https://macamp.si/download/).
+2. Double-click the DMG to mount it.
+3. Drag **MacAMP.app** into your **Applications** folder.
+4. Eject the DMG.
+
+> The download is large (roughly 400 MB) because the Karaoke vocal-separation model ships inside the app. Older versions stay available at `https://downloads.macamp.si/releases/MacAMP-<version>.dmg`.
+
+### First launch — getting past Gatekeeper
+
+**Which build do you have?**
+
+- **Notarized build** (signed with an Apple Developer ID). Gatekeeper clears it silently — just open it. If you instead see *"MacAMP cannot be opened because the developer cannot be verified,"* you downloaded the file from somewhere other than the official release. Delete it and re-download from the official source.
+- **Community / CI build** (ad-hoc signed — no Apple Developer account involved). macOS blocks it on first launch. On macOS 15 Sequoia the warning says the app is **"damaged and can't be opened"** — this is misleading. The download is fine; macOS simply refuses code it can't attribute to a registered developer.
+
+**Right-click → Open no longer works on macOS Sequoia.** Apple removed that shortcut. Use this instead — you only ever do it once:
+
+1. Double-click **MacAMP** in Applications. The warning appears — click **Done**.
+2. Open  **System Settings → Privacy & Security**.
+3. Scroll down to the **Security** section. You'll see a line like *"MacAMP was blocked from use because it is not from an identified developer."*
+4. Click **Open Anyway**.
+5. Authenticate with Touch ID, your Apple Watch, or your login password.
+6. Double-click **MacAMP** again and confirm at the final prompt.
+
+macOS remembers this decision. Every launch after this one is silent, including after updates.
+
+> **Still blocked after step 6?** Make sure you copied MacAMP into `/Applications` first — the "Open Anyway" grant is tied to the app's location. If you moved it afterwards, repeat the steps from the new location.
+
+### First launch — the app itself
+
+On first launch MacAMP opens a single window with an empty library. A brief onboarding prompt invites you to add your music folders. You can skip this and add folders later via **MacAMP > Settings > Library**.
+
+The app restores its last window size and position on subsequent launches. If you enabled **Resume on Launch** in General preferences, it also restores the last track and queue position.
+
+### Keeping MacAMP up to date
+
+The macOS app updates itself using **Sparkle**, the standard macOS update framework. No App Store, no account, no telemetry — MacAMP just checks a signed release feed.
+
+**Automatic checks run in the background.** When a newer version is available, MacAMP shows a release-notes window with an **Install Update** button. It downloads in the background, then relaunches into the new version.
+
+**Check manually** any time:
+
+1. Open **MacAMP > Settings** (**⌘,**) and select the **Updates** tab.
+2. Click **Check for Updates…**.
+
+A manual check is verbose: it tells you when you're already up to date, and it reports network errors. The background check stays silent unless there's something to install. The button greys out only while a check is already in flight.
+
+**The one setting you control** — **Update channel**, also in the **Updates** tab:
+
+| Channel | What you get |
+|---|---|
+| **Stable** (default) | Finished releases only. |
+| **Beta** | Finished releases **plus** pre-release builds — newer features, more rough edges. |
+
+Switching back to Stable simply stops offering betas; it does not downgrade a beta you already installed.
+
+**Why updates are safe.** Every release is cryptographically signed with a key that never leaves the developer's machine, and MacAMP verifies that signature against a public key baked into the app before it installs anything. An update that fails verification is discarded. Where possible Sparkle downloads a small **delta** containing only what changed rather than the whole app, so a typical update is far smaller than the original download.
+
+**Note for community builds:** the "Open Anyway" step above is a *first-launch* action only. Updates installed by Sparkle replace the app in place and do **not** re-trigger it.
+
+---
+
+## iOS and iPadOS
+
+### Installing on iOS
+
+MacAMP has no App Store listing on any platform — direct distribution is the
+permanent, owner-decided channel (see [Distribution](./distribution)). The
+`macampiOS` shell is also still 🚧 work in progress and not yet packaged for
+public release; to run it today, build `macampiOS` from source (see the
+project's `iOS/README.md`) onto a simulator or your own device.
+
+### First launch
+
+On first launch the app opens to the **Library** tab with an empty state. Tap the **Import** button (top-right of the Library screen) to add music files from the Files app or iCloud Drive.
+
+MacAMP requests access to your music files through the standard iOS document picker. No special permissions are needed beyond what the picker grants.
+
+### Updates
+
+There is no public iOS build yet, so there is no update mechanism to describe — see [Installing on iOS](#installing-on-ios) above. This section will be filled in once `macampiOS` ships.
+
+---
+
+## Supported formats
+
+MacAMP plays every format in the SFBAudioEngine codec set:
+
+- Lossless: FLAC, ALAC, WAV, AIFF, WavPack, Monkey's Audio (APE)
+- Lossy: MP3, AAC, Vorbis, Opus, Musepack
+- DSD: DSF, DFF (converted to PCM on playback)
+- Module: MOD, S3M, XM, IT, and others
+
+No additional codecs or plug-ins are required.

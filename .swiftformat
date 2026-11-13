@@ -1,0 +1,12 @@
+# MacAMP SwiftFormat configuration
+# Pre-commit lint check (documented for CI / hooks): mint run swiftformat . --lint
+--swiftversion 6.0
+--maxwidth 120
+--wraparguments before-first
+--enable blankLineAfterImports
+
+# Never format generated / build output, throwaway Phase 0 spike code (Spikes/), or the
+# optional macOS-only projectM backend (macOS/ProjectM/ wraps a vendored LGPL C++ library,
+# is compiled out of App Store, off the critical path — not held to production Swift style).
+# `**/Derived` catches Tuist's generated TuistBundle sources under each project dir.
+--exclude .build,.build-l10n-macos,.build-l10n-ios,DerivedData,Tuist/.build,Derived,**/Derived,Spikes,macOS/ProjectM

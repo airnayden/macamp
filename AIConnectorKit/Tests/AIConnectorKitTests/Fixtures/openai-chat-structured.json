@@ -1,0 +1,25 @@
+{
+  "id": "chatcmpl-Bq9V5X0m1nQ2sT7uW3yZ",
+  "object": "chat.completion",
+  "created": 1756315657,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"genres\":[\"Shoegaze\"],\"moodTags\":[\"dreamy\"],\"seedArtists\":[],\"targetCount\":25,\"yearLowerBound\":1990,\"yearUpperBound\":null}",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 214,
+    "completion_tokens": 41,
+    "total_tokens": 255
+  },
+  "service_tier": "default"
+}

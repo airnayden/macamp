@@ -1,0 +1,443 @@
+---
+name: CI
+
+# The docs site has its own workflow (docs.yml), so docs-only changes skip the
+# Swift jobs. Releases are built and published locally (scripts/release.sh
+# --publish uploads to Cloudflare R2), never from CI.
+on:
+  push:
+    branches: ["**"]
+    paths-ignore: ["docs-site/**", ".github/workflows/docs.yml"]
+  pull_request:
+    paths-ignore: ["docs-site/**", ".github/workflows/docs.yml"]
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref to save runner minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least-privilege token for the whole workflow.
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # lint — SwiftFormat (lint mode) + SwiftLint (strict), tools pinned via Mint.
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint (SwiftFormat + SwiftLint)
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode (latest stable -> Swift 6 toolchain)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install Mint
+        run: brew install mint
+
+      # Branch-scoped Mint cache keyed on the pinned Mintfile.
+      - name: Cache Mint packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.mint
+          key: ${{ runner.os }}-mint-${{ github.ref_name }}-${{ hashFiles('Mintfile') }}
+          restore-keys: |
+            ${{ runner.os }}-mint-${{ github.ref_name }}-
+            ${{ runner.os }}-mint-
+
+      - name: Bootstrap pinned tools (SwiftLint 0.64.0, SwiftFormat 0.61.1)
+        run: mint bootstrap
+
+      - name: SwiftFormat (lint mode)
+        run: mint run swiftformat . --lint
+
+      - name: SwiftLint (strict)
+        run: mint run swiftlint lint --strict
+
+  # ---------------------------------------------------------------------------
+  # test-package — build + test the PlayerCore SwiftPM package directly, then the
+  # AIConnectorKit package. AIConnectorKit is a SEPARATE local package that
+  # depends on PlayerCore (never the reverse), so a root `swift test` never sees
+  # it and it needs its own pass here.
+  # ---------------------------------------------------------------------------
+  test-package:
+    name: Test PlayerCore (SwiftPM)
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode (latest stable -> Swift 6 toolchain)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      # Branch-scoped SPM cache keyed on the resolved dependency graph. The root
+      # package currently has no external deps, so Package.resolved may be absent;
+      # Package.swift is included so the key still rotates on manifest changes.
+      - name: Cache SwiftPM build
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            AIConnectorKit/.build
+          key: ${{ runner.os }}-spm-${{ github.ref_name }}-${{ hashFiles('Package.resolved', 'Package.swift', 'AIConnectorKit/Package.swift') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-${{ github.ref_name }}-
+            ${{ runner.os }}-spm-
+
+      - name: Build (release)
+        run: swift build -c release
+
+      # Allocation measurements share process-wide counters; keep the full gate serial.
+      - name: Test (serial)
+        shell: bash
+        run: swift test --no-parallel
+
+      # The standalone-core proof: `AIConnectorKit` must compile with nothing from
+      # PlayerCore or GRDB in its build, which is what keeps it liftable into
+      # another app. Only `AIConnectorBridge` may reach across.
+      - name: Build AIConnectorKit (standalone core)
+        working-directory: AIConnectorKit
+        run: swift build --target AIConnectorKit
+
+      - name: Test AIConnectorKit
+        working-directory: AIConnectorKit
+        run: swift test
+
+  # ---------------------------------------------------------------------------
+  # test-app — generate the Xcode workspace with Tuist and run the macOS tests.
+  # ---------------------------------------------------------------------------
+  test-app:
+    name: Test macOS app (Tuist + xcodebuild)
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode (latest stable -> Swift 6 toolchain)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install Tuist
+        run: brew install tuist
+
+      - name: Install xcbeautify
+        run: brew install xcbeautify
+
+      # Caches DerivedData *and* resolved SourcePackages. Branch-scoped key with a
+      # per-commit suffix so restores fall back to the latest build on this branch
+      # (never poisoning other branches).
+      - name: Cache DerivedData (xcode-cache)
+        uses: irgaly/xcode-cache@v2
+        with:
+          key: ${{ runner.os }}-xcode-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-xcode-${{ github.ref_name }}-
+
+      # --force-resolved-versions pins to the committed Tuist/Package.resolved so
+      # CI never silently upgrades a dependency.
+      - name: Tuist install
+        run: tuist install --force-resolved-versions
+
+      - name: Tuist generate (headless)
+        run: tuist generate --no-open
+
+      - name: Run macOS tests
+        run: |
+          set -o pipefail
+          # macampMacUITests is exercised by the non-required `uitest-smoke` job
+          # (it needs the entitlement-free signing override); skip it here so this
+          # required job stays team-free and green.
+          xcodebuild test \
+            -workspace MacAMP.xcworkspace \
+            -scheme macampMac \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath .build-l10n-macos \
+            -skip-testing:macampMacUITests \
+            SWIFT_EMIT_LOC_STRINGS=YES \
+            | xcbeautify
+
+      - name: Validate compiled macOS localization declarations
+        run: |
+          swift scripts/check-localization.swift . macOS .build-l10n-macos
+          bash scripts/tests/localization-coverage.sh
+
+  # ---------------------------------------------------------------------------
+  # uitest-smoke — NON-REQUIRED XCUITest smoke for macampMac. The host app's
+  # App-Group entitlement would demand a provisioning profile under `xcodebuild
+  # test`; with no Apple team, the run strips entitlements + ad-hoc signs at
+  # INVOCATION scope (per-run only — dev/release builds are unchanged).
+  # continue-on-error + absent from `release` needs: a smoke regression never
+  # blocks merges or releases. Pairs with `test-app`'s -skip-testing above.
+  # ---------------------------------------------------------------------------
+  uitest-smoke:
+    name: UITest smoke (macampMac, non-required)
+    runs-on: macos-15
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode (latest stable -> Swift 6 toolchain)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install Tuist
+        run: brew install tuist
+
+      - name: Install xcbeautify
+        run: brew install xcbeautify
+
+      - name: Tuist install
+        run: tuist install --force-resolved-versions
+
+      - name: Tuist generate (headless)
+        run: tuist generate --no-open
+
+      - name: Run UITest smoke (entitlement-free signing override)
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -workspace MacAMP.xcworkspace \
+            -scheme macampMac \
+            -destination 'platform=macOS,arch=arm64' \
+            -only-testing:macampMacUITests \
+            CODE_SIGN_IDENTITY=- \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_ENTITLEMENTS= \
+            | xcbeautify
+
+  # ---------------------------------------------------------------------------
+  # build-ios — generate the Xcode workspace and test the iOS app (macampiOS)
+  # on an installed Simulator. This catches app-shell build breakage that
+  # ios-portability's bare PlayerCore-Package build cannot see (Tuist target
+  # wiring, entitlements, resource bundling).
+  # ---------------------------------------------------------------------------
+  build-ios:
+    name: Test macampiOS app (Tuist + xcodebuild)
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode (latest stable -> Swift 6 toolchain)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install Tuist
+        run: brew install tuist
+
+      - name: Install xcbeautify
+        run: brew install xcbeautify
+
+      # Caches DerivedData *and* resolved SourcePackages. Branch-scoped key with a
+      # per-commit suffix so restores fall back to the latest build on this branch
+      # (never poisoning other branches).
+      - name: Cache DerivedData (xcode-cache)
+        uses: irgaly/xcode-cache@v2
+        with:
+          key: ${{ runner.os }}-xcode-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-xcode-${{ github.ref_name }}-
+
+      # --force-resolved-versions pins to the committed Tuist/Package.resolved so
+      # CI never silently upgrades a dependency.
+      - name: Tuist install
+        run: tuist install --force-resolved-versions
+
+      - name: Tuist generate (headless)
+        run: tuist generate --no-open
+
+      - name: Run macampiOS tests (Simulator)
+        run: |
+          set -o pipefail
+          SIMULATOR_ID="$(bash scripts/ci-ios-simulator.sh)"
+          xcodebuild test \
+            -workspace MacAMP.xcworkspace \
+            -scheme macampiOS \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -derivedDataPath .build-l10n-ios \
+            CODE_SIGNING_ALLOWED=NO \
+            SWIFT_EMIT_LOC_STRINGS=YES \
+            | xcbeautify
+
+      - name: Validate compiled iOS localization declarations
+        run: swift scripts/check-localization.swift . iOS .build-l10n-ios
+
+  # ---------------------------------------------------------------------------
+  # portability-guard — HARD failure if PlayerCore imports AppKit/UIKit.
+  # NEVER mark this continue-on-error: the shared-core invariant is load-bearing.
+  # ---------------------------------------------------------------------------
+  portability-guard:
+    name: PlayerCore portability guard (no AppKit/UIKit)
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check PlayerCore for AppKit/UIKit imports
+        run: ./scripts/check-playercore-portability.sh
+
+      # The surviving assertion of the retired `oauth-linkage` job (see that
+      # script's header for why the other two went), now also covering the MCP
+      # client. A pure grep, so it belongs in this cheap job rather than one that
+      # builds.
+      - name: Check iOS links no OAuth or MCP-client product
+        run: ./scripts/check-ios-oauth-linkage.sh
+
+      # The MCP SDK is now pinned in two independently-resolved graphs (the Tuist
+      # app graph and the AIConnectorKit package graph). Nothing makes them agree,
+      # and a disagreement is silent — both halves build. Another pure grep + JSON
+      # read, so it belongs in this cheap, Xcode-free job.
+      - name: Check MCP SDK pin is identical on both sides
+        run: ./scripts/check-mcp-pin.sh
+
+      # The downloader is the one feature that runs a third-party binary and fetches
+      # bytes off the public internet. Each power is confined to ONE named file
+      # (YtDlpProcessRunner / DownloadToolReleaseClient); this holds that line. A
+      # separate guard from ai-network-boundary on purpose — different homes,
+      # different invariant. Pure grep, so it belongs in this cheap job.
+      - name: Check downloader spawn/transport boundary
+        run: ./scripts/check-downloader-boundary.sh
+
+  # ---------------------------------------------------------------------------
+  # ios-portability — prove PlayerCore still COMPILES for iOS (catches API drift
+  # the static grep guard cannot, e.g. accidental macOS-only API usage). xcodebuild
+  # builds the SwiftPM package via its auto-generated "PlayerCore-Package" scheme;
+  # no .xcodeproj/.xcworkspace is committed, so the package is resolved directly.
+  # ---------------------------------------------------------------------------
+  ios-portability:
+    name: PlayerCore builds for iOS (portability)
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode (latest stable -> Swift 6 toolchain)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build PlayerCore for iOS Simulator
+        run: |
+          xcodebuild build \
+            -scheme PlayerCore-Package \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath .build-ios \
+            -quiet
+
+      - name: Build AIConnectorKit for iOS Simulator
+        working-directory: AIConnectorKit
+        run: |
+          xcodebuild build \
+            -scheme AIConnectorKit \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath .build-ios \
+            CODE_SIGNING_ALLOWED=NO \
+            -quiet
+
+  # ---------------------------------------------------------------------------
+  # fm-compile-check — HARD failure if the SDK this pipeline resolves to lacks
+  # FoundationModels. `canImport` is SDK-scoped, so a toolchain regression would compile
+  # the assistant layer OUT and still report green; this job makes that hole red.
+  # NEVER mark this continue-on-error: it is the only proof FM code is compiled on CI
+  # rather than preprocessed away. `macos-15` ships Xcode 26.x beside its 16.4 default,
+  # so `latest-stable` already selects a macOS 26 SDK — no runner bump needed. The Xcode
+  # step below is deliberately IDENTICAL to every other job's: it must prove THIS
+  # pipeline's toolchain, not a different image's.
+  # ---------------------------------------------------------------------------
+  fm-compile-check:
+    name: FoundationModels present in CI SDK
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode (latest stable -> Swift 6 toolchain)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Record resolved toolchain
+        run: |
+          xcodebuild -version
+          echo "macOS SDK version: $(xcrun --sdk macosx --show-sdk-version)"
+          echo "macOS SDK path:    $(xcrun --sdk macosx --show-sdk-path)"
+
+      - name: Probe canImport(FoundationModels)
+        run: |
+          xcrun --sdk macosx swiftc -typecheck -swift-version 6 \
+            scripts/fm-probe/FoundationModelsProbe.swift
+
+  # ---------------------------------------------------------------------------
+  # frozen-column-guard — HARD failure if code reads or writes the four `track`
+  # columns migration v12 froze (playCount, listenedCount, isFavourite,
+  # customPosition). They still exist in the schema — migrations are append-only —
+  # so the compiler cannot catch a regression here; per-profile state must go
+  # through `profileTrackState`. NEVER mark this continue-on-error.
+  # ---------------------------------------------------------------------------
+  frozen-column-guard:
+    name: Frozen track columns unused (v12 freeze)
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run frozen-track-column guard
+        run: ./scripts/check-frozen-track-columns.sh
+
+  # ---------------------------------------------------------------------------
+  # no-hardcoded-text — HARD failure if user-facing copy is hardcoded instead of
+  # routed through a String Catalog. MacAMP ships ZERO hardcoded user-facing text.
+  # NEVER mark this continue-on-error: localization coverage is load-bearing.
+  # ---------------------------------------------------------------------------
+  no-hardcoded-text:
+    name: No hardcoded user-facing text
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run no-hardcoded-text guard
+        run: ./scripts/check-hardcoded-strings.sh
+
+      # The guard above proves no copy is a BARE LITERAL. It cannot prove the
+      # keys a surface renders ever reach the catalog — an absent key falls back
+      # to its English `defaultValue` in all seven languages while every gate
+      # stays green. This closes that gap per surface (see the script's header
+      # for why neither a key-prefix audit nor a bare-symbol scan can).
+      - name: Run render-site l10n guard (downloads surface)
+        run: ./scripts/check-l10n-render-sites.sh macOS/Sources/Downloads
+
+  # ---------------------------------------------------------------------------
+  # ai-network-boundary — HARD failure if the AI surface names `URLSession` or
+  # spawns a process outside its allowed home. The assistant/insight services, the
+  # shared view models, the macOS Intelligence panes, the chat UI, the bridge and
+  # the MCP client must reach the network THROUGH a connector, or the kit's
+  # deadline, payload budget, consent gate and error taxonomy are all bypassable;
+  # and only `MCPProcessTransport.swift` may launch a child process. This is a
+  # pure source grep — no build, no Xcode, no Tuist — so it is deliberately the
+  # cheapest job here. Replaces the retired blanket "new modules => zero
+  # URLSession" premise from `.omo/plans/local-ai-playlists.md`, which
+  # `Spikes/ADR-ai-provider-connectors.md` reversed. Read the script's header for
+  # what the assertion does and does NOT cover — the MCP SDK's own transports are
+  # a second egress home this grep cannot see.
+  # NEVER mark this continue-on-error.
+  # ---------------------------------------------------------------------------
+  ai-network-boundary:
+    name: AI transport and process spawn confined to their homes
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run AI network-boundary guard
+        run: ./scripts/check-ai-network-boundary.sh
