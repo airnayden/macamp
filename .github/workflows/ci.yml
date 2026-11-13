@@ -30,7 +30,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Select Xcode (latest stable -> Swift 6 toolchain)
         uses: maxim-lobanov/setup-xcode@v1
@@ -42,7 +42,7 @@ jobs:
 
       # Branch-scoped Mint cache keyed on the pinned Mintfile.
       - name: Cache Mint packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.mint
           key: ${{ runner.os }}-mint-${{ github.ref_name }}-${{ hashFiles('Mintfile') }}
@@ -70,7 +70,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Select Xcode (latest stable -> Swift 6 toolchain)
         uses: maxim-lobanov/setup-xcode@v1
@@ -81,7 +81,7 @@ jobs:
       # package currently has no external deps, so Package.resolved may be absent;
       # Package.swift is included so the key still rotates on manifest changes.
       - name: Cache SwiftPM build
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             .build
@@ -118,7 +118,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Select Xcode (latest stable -> Swift 6 toolchain)
         uses: maxim-lobanov/setup-xcode@v1
@@ -135,7 +135,7 @@ jobs:
       # per-commit suffix so restores fall back to the latest build on this branch
       # (never poisoning other branches).
       - name: Cache DerivedData (xcode-cache)
-        uses: irgaly/xcode-cache@v2
+        uses: irgaly/xcode-cache@v1
         with:
           key: ${{ runner.os }}-xcode-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: ${{ runner.os }}-xcode-${{ github.ref_name }}-
@@ -182,7 +182,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Select Xcode (latest stable -> Swift 6 toolchain)
         uses: maxim-lobanov/setup-xcode@v1
@@ -226,7 +226,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Select Xcode (latest stable -> Swift 6 toolchain)
         uses: maxim-lobanov/setup-xcode@v1
@@ -243,7 +243,7 @@ jobs:
       # per-commit suffix so restores fall back to the latest build on this branch
       # (never poisoning other branches).
       - name: Cache DerivedData (xcode-cache)
-        uses: irgaly/xcode-cache@v2
+        uses: irgaly/xcode-cache@v1
         with:
           key: ${{ runner.os }}-xcode-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: ${{ runner.os }}-xcode-${{ github.ref_name }}-
@@ -281,7 +281,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check PlayerCore for AppKit/UIKit imports
         run: ./scripts/check-playercore-portability.sh
@@ -319,7 +319,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Select Xcode (latest stable -> Swift 6 toolchain)
         uses: maxim-lobanov/setup-xcode@v1
@@ -359,7 +359,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Select Xcode (latest stable -> Swift 6 toolchain)
         uses: maxim-lobanov/setup-xcode@v1
@@ -389,7 +389,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Run frozen-track-column guard
         run: ./scripts/check-frozen-track-columns.sh
@@ -404,7 +404,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Run no-hardcoded-text guard
         run: ./scripts/check-hardcoded-strings.sh
@@ -437,7 +437,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Run AI network-boundary guard
         run: ./scripts/check-ai-network-boundary.sh
