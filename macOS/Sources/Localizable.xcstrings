@@ -30738,6 +30738,60 @@
         }
       }
     },
+    "app.preferences.intelligence.provider.appleIntelligenceRetired": {
+      "comment": "Footnote under the provider picker announcing that the Apple Intelligence option was retired",
+      "extractionState": "manual",
+      "localizations": {
+        "bg": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence вече не е наличен като доставчик и ще бъде премахнат в бъдеща актуализация."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence ist als Anbieter nicht mehr verfügbar und wird in einem künftigen Update entfernt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence is no longer available as a provider and will be removed in a future update."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence ya no está disponible como proveedor y se eliminará en una próxima actualización."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence n’est plus disponible comme fournisseur et sera supprimé dans une prochaine mise à jour."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence non è più disponibile come fornitore e verrà rimosso in un prossimo aggiornamento."
+          }
+        },
+        "pseudo": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Apple Intelligence is no longer available as a provider and will be removed in a future update."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence больше не доступен как провайдер и будет удалён в одном из следующих обновлений."
+          }
+        }
+      }
+    },
     "app.preferences.intelligence.provider.caption": {
       "comment": "Explains that only the default provider keeps requests on-device",
       "extractionState": "manual",
@@ -30788,6 +30842,60 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Apple Intelligence отвечает на этом Mac. Остальные провайдеры получают ваш запрос по сети."
+          }
+        }
+      }
+    },
+    "app.preferences.intelligence.provider.caption.retired": {
+      "comment": "Explains which providers keep requests on-device, after Apple Intelligence was retired",
+      "extractionState": "manual",
+      "localizations": {
+        "bg": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Локален сървър Ollama държи всичко на този Mac. Другите доставчици получават заявката ви по мрежата."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ein lokaler Ollama-Server behält alles auf diesem Mac. Andere Anbieter erhalten deine Anfrage über das Netzwerk."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A local Ollama server keeps everything on this Mac. Other providers receive your request over the network."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Un servidor local de Ollama mantiene todo en este Mac. Los demás proveedores reciben tu solicitud a través de la red."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Un serveur Ollama local garde tout sur ce Mac. Les autres fournisseurs reçoivent votre demande par le réseau."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Un server Ollama locale tiene tutto su questo Mac. Gli altri fornitori ricevono la tua richiesta tramite la rete."
+          }
+        },
+        "pseudo": {
+          "stringUnit": {
+            "state": "new",
+            "value": "A local Ollama server keeps everything on this Mac. Other providers receive your request over the network."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Локальный сервер Ollama оставляет всё на этом Mac. Другие провайдеры получают ваш запрос по сети."
           }
         }
       }
@@ -31167,6 +31275,60 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Обновите, чтобы загрузить список моделей этого провайдера."
+          }
+        }
+      }
+    },
+    "app.preferences.intelligence.provider.none": {
+      "comment": "Provider picker entry meaning no AI provider: requests are matched on this Mac without a language model",
+      "extractionState": "manual",
+      "localizations": {
+        "bg": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Няма (вграден търсач)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Keiner (integrierter Abgleich)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None (built-in matcher)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ninguno (buscador integrado)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Aucun (correspondance intégrée)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nessuno (ricerca integrata)"
+          }
+        },
+        "pseudo": {
+          "stringUnit": {
+            "state": "new",
+            "value": "None (built-in matcher)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Нет (встроенный поиск)"
           }
         }
       }
@@ -32738,6 +32900,60 @@
         }
       }
     },
+    "app.preferences.intelligence.status.noProvider": {
+      "comment": "Label of the status row when no AI provider is selected",
+      "extractionState": "manual",
+      "localizations": {
+        "bg": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "AI доставчик"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "KI-Anbieter"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI provider"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Proveedor de IA"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Fournisseur d’IA"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Fornitore di IA"
+          }
+        },
+        "pseudo": {
+          "stringUnit": {
+            "state": "new",
+            "value": "AI provider"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ИИ-провайдер"
+          }
+        }
+      }
+    },
     "app.preferences.intelligence.subtitle": {
       "comment": "One-line subtitle under the Intelligence preferences pane title",
       "extractionState": "manual",
@@ -32788,6 +33004,60 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Функции на устройстве, которые понимают вашу медиатеку."
+          }
+        }
+      }
+    },
+    "app.preferences.intelligence.subtitle.retired": {
+      "comment": "One-line subtitle under the Intelligence preferences pane title",
+      "extractionState": "manual",
+      "localizations": {
+        "bg": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "AI функции, които разбират библиотеката ви."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "KI-Funktionen, die deine Mediathek verstehen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI features that understand your library."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Funciones de IA que entienden tu biblioteca."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Des fonctions d’IA qui comprennent votre bibliothèque."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Funzioni di IA che comprendono la tua libreria."
+          }
+        },
+        "pseudo": {
+          "stringUnit": {
+            "state": "new",
+            "value": "AI features that understand your library."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ИИ-функции, которые понимают вашу медиатеку."
           }
         }
       }
@@ -39238,6 +39508,60 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Для этой функции нужна более новая версия операционной системы."
+          }
+        }
+      }
+    },
+    "assistant.availability.retired": {
+      "comment": "Shown when no AI provider is selected now that the Apple Intelligence tier has been retired",
+      "extractionState": "manual",
+      "localizations": {
+        "bg": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence се спира. Изберете AI доставчик в Настройки › Интелигентност."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence wird eingestellt. Wähle einen KI-Anbieter unter Einstellungen › Intelligenz."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence is being retired. Choose an AI provider in Settings › Intelligence."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence se va a retirar. Elige un proveedor de IA en Ajustes › Inteligencia."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence va être retiré. Choisissez un fournisseur d’IA dans Réglages › Intelligence."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence sta per essere ritirato. Scegli un fornitore di IA in Impostazioni › Intelligenza."
+          }
+        },
+        "pseudo": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Apple Intelligence is being retired. Choose an AI provider in Settings › Intelligence."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence выводится из употребления. Выберите ИИ-провайдера в Настройки › Интеллект."
           }
         }
       }
@@ -58196,6 +58520,60 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Треков, которые не удалось проанализировать и которые будут пропущены: %@."
+          }
+        }
+      }
+    },
+    "app.preferences.intelligence.caption.retired": {
+      "comment": "Caption under the Intelligence master switch after Apple Intelligence was retired",
+      "extractionState": "manual",
+      "localizations": {
+        "bg": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Изберете доставчик по-долу. Локален сървър Ollama държи всичко на този Mac."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Wähle unten einen Anbieter. Ein lokaler Ollama-Server behält alles auf diesem Mac."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a provider below. A local Ollama server keeps everything on this Mac."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Elige un proveedor abajo. Un servidor local de Ollama mantiene todo en este Mac."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Choisissez un fournisseur ci-dessous. Un serveur Ollama local garde tout sur ce Mac."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Scegli un fornitore qui sotto. Un server Ollama locale tiene tutto su questo Mac."
+          }
+        },
+        "pseudo": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Choose a provider below. A local Ollama server keeps everything on this Mac."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Выберите провайдера ниже. Локальный сервер Ollama оставляет всё на этом Mac."
           }
         }
       }

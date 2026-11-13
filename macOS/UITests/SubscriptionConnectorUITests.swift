@@ -22,7 +22,7 @@ import XCTest
 /// are covered hermetically by `macampMacTests`' `ChatGPTSignInTests`, which drives
 /// the same model with a captured `openURL` and a real socket on a test port.
 ///
-/// The provider selection is restored to Apple Intelligence in `tearDown`, so a run
+/// The provider selection is restored to "None" (the default) in `tearDown`, so a run
 /// never leaves the developer's app routing through a provider they did not choose.
 final class SubscriptionConnectorUITests: XCTestCase {
     private var app: XCUIApplication!
@@ -77,7 +77,7 @@ final class SubscriptionConnectorUITests: XCTestCase {
 
         // Dismiss WITHOUT starting a login — no browser, no bound port.
         element("intelligence.connectorSignIn.doneButton").click()
-        restoreAppleIntelligence(in: picker)
+        restoreNoProvider(in: picker)
     }
 
     /// Claude Subscription keeps its own, separate sheet — and reports a session
@@ -117,7 +117,7 @@ final class SubscriptionConnectorUITests: XCTestCase {
         }
 
         element("intelligence.connectorSignIn.doneButton").click()
-        restoreAppleIntelligence(in: picker)
+        restoreNoProvider(in: picker)
     }
 
     /// The Ollama setup sheet carries the optional Cloud key beneath the address.
@@ -142,7 +142,7 @@ final class SubscriptionConnectorUITests: XCTestCase {
         snapshot("wave-b-ollama-optional-key-field")
 
         element("intelligence.connectorConfig.ollama.cancelButton").click()
-        restoreAppleIntelligence(in: picker)
+        restoreNoProvider(in: picker)
     }
 }
 
@@ -171,9 +171,9 @@ private extension SubscriptionConnectorUITests {
         entry.click()
     }
 
-    func restoreAppleIntelligence(in picker: XCUIElement) {
+    func restoreNoProvider(in picker: XCUIElement) {
         picker.click()
-        let entry = app.menuItems["Apple Intelligence"]
+        let entry = app.menuItems["None (built-in matcher)"]
         if entry.waitForExistence(timeout: 10) {
             entry.click()
         }

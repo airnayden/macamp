@@ -106,9 +106,18 @@ jobs:
         working-directory: AIConnectorKit
         run: swift build --target AIConnectorKit
 
+      # Failing tests are also emitted as annotations, which show on the run's
+      # summary page without having to open the raw log.
       - name: Test AIConnectorKit
         working-directory: AIConnectorKit
-        run: swift test
+        shell: bash
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee "$RUNNER_TEMP/aiconnectorkit-tests.log" || {
+            grep -E '✘|error:|failed|Fatal|crashed' "$RUNNER_TEMP/aiconnectorkit-tests.log" \
+              | grep -v ' passed ' | head -40 | sed 's/^/::error title=AIConnectorKit::/'
+            exit 1
+          }
 
   # ---------------------------------------------------------------------------
   # test-app — generate the Xcode workspace with Tuist and run the macOS tests.

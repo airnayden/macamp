@@ -93,7 +93,7 @@ final class IntelligencePaneUITests: XCTestCase {
 
     /// Provider picker flow (ai-provider-connectors todo 14): the model picker and
     /// the per-connector status row exist only once a connector is chosen, and the
-    /// choice is restored to the shipped Apple Intelligence default afterwards.
+    /// choice is restored to the shipped default (no provider) afterwards.
     ///
     /// Selecting Ollama probes `127.0.0.1:11434`, which refuses instantly when no
     /// server is running — a loopback round-trip, never an outbound one, and the
@@ -104,7 +104,7 @@ final class IntelligencePaneUITests: XCTestCase {
         XCTAssertTrue(picker.waitForExistence(timeout: 15), "the pane should host the provider picker")
         XCTAssertFalse(
             element("intelligence.modelPicker").exists,
-            "with Apple Intelligence selected there is no provider, so no model to pick"
+            "with no provider selected (the shipped default) there is no model to pick"
         )
         snapshot("todo-14-provider-picker-default")
 
@@ -123,7 +123,7 @@ final class IntelligencePaneUITests: XCTestCase {
         )
         snapshot("todo-14-provider-picker-selected")
 
-        restoreAppleIntelligence(in: picker)
+        restoreNoProvider(in: picker)
         XCTAssertTrue(
             waitUntil("the model picker disappears") { !self.element("intelligence.modelPicker").exists },
             "restoring the shipped default should leave no provider selected"
@@ -163,9 +163,11 @@ private extension IntelligencePaneUITests {
 
     /// Puts the shipped default back, so a run never leaves the developer's app
     /// routing requests through a provider they did not choose.
-    func restoreAppleIntelligence(in picker: XCUIElement) {
+    /// Picks the "None (built-in matcher)" entry, the shipped default since Apple
+    /// Intelligence was retired as a provider.
+    func restoreNoProvider(in picker: XCUIElement) {
         picker.click()
-        let entry = app.menuItems["Apple Intelligence"]
+        let entry = app.menuItems["None (built-in matcher)"]
         if entry.waitForExistence(timeout: 10) {
             entry.click()
         }

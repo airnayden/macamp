@@ -4216,6 +4216,60 @@
         }
       }
     },
+    "assistant.availability.retired": {
+      "comment": "Shown when no AI provider is selected now that the Apple Intelligence tier has been retired",
+      "extractionState": "manual",
+      "localizations": {
+        "bg": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence се спира. Изберете AI доставчик в Настройки › Интелигентност."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence wird eingestellt. Wähle einen KI-Anbieter unter Einstellungen › Intelligenz."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence is being retired. Choose an AI provider in Settings › Intelligence."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence se va a retirar. Elige un proveedor de IA en Ajustes › Inteligencia."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence va être retiré. Choisissez un fournisseur d’IA dans Réglages › Intelligence."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence sta per essere ritirato. Scegli un fornitore di IA in Impostazioni › Intelligenza."
+          }
+        },
+        "pseudo": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Apple Intelligence is being retired. Choose an AI provider in Settings › Intelligence."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Intelligence выводится из употребления. Выберите ИИ-провайдера в Настройки › Интеллект."
+          }
+        }
+      }
+    },
     "assistant.naming.description.summary": {
       "comment": "One-line playlist description; 1 = number of tracks, 2 = number of distinct artists",
       "extractionState": "manual",
