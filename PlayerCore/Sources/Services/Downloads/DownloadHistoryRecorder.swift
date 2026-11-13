@@ -45,7 +45,7 @@ public final class DownloadHistoryRecorder {
         append(makeEntry(
             from: item,
             filePath: "",
-            failureReason: [reason, detail].compactMap { $0 }.joined(separator: "\n")
+            failureReason: [reason, detail].compactMap(\.self).joined(separator: "\n")
         ))
     }
 

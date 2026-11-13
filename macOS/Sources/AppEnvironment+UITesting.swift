@@ -385,6 +385,7 @@ import Visualizer
             onEntriesChanged?(sequence, readyRecords())
         }
     }
+
     private struct UITestFailingLyricsProvider: LyricsProviding {
         func resolveLyrics(for _: LyricsRequest, options: LyricsOptions) async throws -> Lyrics? {
             guard options.allowOnlineFetch else { return nil }

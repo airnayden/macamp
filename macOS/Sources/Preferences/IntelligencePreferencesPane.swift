@@ -71,7 +71,8 @@ private struct IntelligenceEnableSection: View {
                 Text(PreferencesStrings.intelligenceToggle)
             }
             .accessibilityIdentifier("intelligence.masterToggle")
-            PreferenceCaption(text: AppleIntelligenceRetirement.isRetired ? PreferencesStrings.intelligenceCaptionRetired : PreferencesStrings.intelligenceCaption)
+            PreferenceCaption(text: AppleIntelligenceRetirement.isRetired ? PreferencesStrings
+                .intelligenceCaptionRetired : PreferencesStrings.intelligenceCaption)
             PreferenceCaption(text: PreferencesStrings.intelligenceOffNotice)
             if let tier {
                 IntelligenceStatusRow(tier: tier)

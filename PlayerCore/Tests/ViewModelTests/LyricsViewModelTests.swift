@@ -233,7 +233,6 @@ struct LyricsFetchOutcomeTests {
     }
 }
 
-
 private actor RetryingLyricsProvider: LyricsProviding {
     let lyrics: Lyrics
     private var calls = 0
@@ -254,8 +253,13 @@ private final class CancellableLyricsProvider: LyricsProviding, @unchecked Senda
     private var didStart = false
     private var didCancel = false
 
-    var started: Bool { lock.withLock { didStart } }
-    var cancelled: Bool { lock.withLock { didCancel } }
+    var started: Bool {
+        lock.withLock { didStart }
+    }
+
+    var cancelled: Bool {
+        lock.withLock { didCancel }
+    }
 
     func resolveLyrics(for _: LyricsRequest, options _: LyricsOptions) async throws -> Lyrics? {
         lock.withLock { didStart = true }

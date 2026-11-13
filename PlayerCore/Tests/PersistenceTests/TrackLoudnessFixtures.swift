@@ -94,12 +94,12 @@ enum TrackLoudnessFixtures {
             """)
             try db.execute(sql: "INSERT INTO eqPreset (name, bandGainsJson) VALUES ('Rock', '[]')")
             try db.execute(sql: """
-                INSERT INTO downloadHistory
-                    (id, canonicalVideoID, filePath, audioFormat, audioQuality,
-                     sourceURL, downloadedAt, utcOffsetSeconds)
-                VALUES ('seeded', 'vid', '/music/seeded.m4a', 'm4a', 'best',
-                        'https://www.youtube.com/watch?v=vid', 1700000000.0, 7200)
-                """)
+            INSERT INTO downloadHistory
+                (id, canonicalVideoID, filePath, audioFormat, audioQuality,
+                 sourceURL, downloadedAt, utcOffsetSeconds)
+            VALUES ('seeded', 'vid', '/music/seeded.m4a', 'm4a', 'best',
+                    'https://www.youtube.com/watch?v=vid', 1700000000.0, 7200)
+            """)
         }
         return queue
     }

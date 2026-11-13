@@ -55,12 +55,12 @@ struct DownloadHistorySchemaTests {
         try AppDatabase.migrator.migrate(queue, upTo: "v20")
         try queue.write { db in
             try db.execute(sql: """
-                INSERT INTO downloadHistory
-                    (id, canonicalVideoID, filePath, audioFormat, audioQuality,
-                     sourceURL, downloadedAt, utcOffsetSeconds)
-                VALUES ('legacy', 'dQw4w9WgXcQ', '/music/legacy.m4a', 'm4a', 'best',
-                        'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 100, 0)
-                """)
+            INSERT INTO downloadHistory
+                (id, canonicalVideoID, filePath, audioFormat, audioQuality,
+                 sourceURL, downloadedAt, utcOffsetSeconds)
+            VALUES ('legacy', 'dQw4w9WgXcQ', '/music/legacy.m4a', 'm4a', 'best',
+                    'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 100, 0)
+            """)
         }
 
         try AppDatabase.migrator.migrate(queue)

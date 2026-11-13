@@ -157,6 +157,7 @@ extension MacAMPStrings {
             comment: "Lyrics service failure with the HTTP status code and system-provided description"
         )
     }
+
     static func lyricsFetchNetworkFailure(_ code: Int, reason: String) -> LocalizedStringResource {
         LocalizedStringResource(
             "app.lyrics.fetch.networkFailure",
@@ -164,6 +165,7 @@ extension MacAMPStrings {
             comment: "Lyrics network failure with the system error code and description"
         )
     }
+
     static func lyricsFetchFailureDetail(_ reason: String) -> LocalizedStringResource {
         LocalizedStringResource(
             "app.lyrics.fetch.failureDetail",

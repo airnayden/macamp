@@ -147,7 +147,8 @@ struct AssistantAvailabilityProbeTests {
     func retiredTierIsNeverAvailable() {
         guard AppleIntelligenceRetirement.isRetired else { return }
         #expect(AssistantAvailabilityProbe.current(intelligenceEnabled: true) == .unavailable(reason: .retired))
-        #expect(AssistantAvailabilityProbe.current(intelligenceEnabled: false) == .unavailable(reason: .intelligenceDisabled))
+        #expect(AssistantAvailabilityProbe
+            .current(intelligenceEnabled: false) == .unavailable(reason: .intelligenceDisabled))
     }
 
     @Test("With the toggle on, the probe never blames the toggle")

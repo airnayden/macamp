@@ -27,7 +27,7 @@ jobs:
   # ---------------------------------------------------------------------------
   lint:
     name: Lint (SwiftFormat + SwiftLint)
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -67,7 +67,7 @@ jobs:
   # ---------------------------------------------------------------------------
   test-package:
     name: Test PlayerCore (SwiftPM)
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -115,7 +115,7 @@ jobs:
   # ---------------------------------------------------------------------------
   test-app:
     name: Test macOS app (Tuist + xcodebuild)
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -178,7 +178,7 @@ jobs:
   # ---------------------------------------------------------------------------
   uitest-smoke:
     name: UITest smoke (macampMac, non-required)
-    runs-on: macos-15
+    runs-on: macos-26
     continue-on-error: true
     steps:
       - name: Checkout
@@ -223,7 +223,7 @@ jobs:
   # ---------------------------------------------------------------------------
   build-ios:
     name: Test macampiOS app (Tuist + xcodebuild)
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -278,7 +278,7 @@ jobs:
   # ---------------------------------------------------------------------------
   portability-guard:
     name: PlayerCore portability guard (no AppKit/UIKit)
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -316,7 +316,7 @@ jobs:
   # ---------------------------------------------------------------------------
   ios-portability:
     name: PlayerCore builds for iOS (portability)
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -356,7 +356,7 @@ jobs:
   # ---------------------------------------------------------------------------
   fm-compile-check:
     name: FoundationModels present in CI SDK
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -386,7 +386,7 @@ jobs:
   # ---------------------------------------------------------------------------
   frozen-column-guard:
     name: Frozen track columns unused (v12 freeze)
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -401,7 +401,7 @@ jobs:
   # ---------------------------------------------------------------------------
   no-hardcoded-text:
     name: No hardcoded user-facing text
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -434,7 +434,7 @@ jobs:
   # ---------------------------------------------------------------------------
   ai-network-boundary:
     name: AI transport and process spawn confined to their homes
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v7
