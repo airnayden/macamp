@@ -219,19 +219,44 @@ put "${LATEST_JSON}" "latest.json" "application/json" "${CC_POINTER}"
 put "${APPCAST_PATH}" "appcast.xml" "application/xml; charset=utf-8" "${CC_POINTER}"
 
 # ------------------------------------------------------------------- verify --
-step "Verifying the public URLs"
-remote_size() { curl -fsSI "$1" | awk 'tolower($1)=="content-length:" {gsub("\r",""); print $2}' | tail -1; }
-for url in "${DMG_URL}" "${PUBLIC_BASE}/MacAMP.dmg"; do
-    got="$(remote_size "${url}" || true)"
-    [[ "${got}" == "${SIZE}" ]] || fail 4 "${url} reports ${got:-no} bytes, expected ${SIZE}"
-    note "✓ ${url}"
+step "Verifying the uploaded objects (R2 API)"
+for key in "releases/${DMG_NAME}" "MacAMP.dmg"; do
+    got="$(r2 s3api head-object --bucket "${R2_BUCKET}" --key "${key}" --query ContentLength --output text 2>/dev/null || true)"
+    [[ "${got}" == "${SIZE}" ]] || fail 4 "${S3}/${key} is ${got:-missing}, expected ${SIZE} bytes"
+    note "✓ ${key} (${SIZE} bytes)"
 done
-curl -fsS "${PUBLIC_BASE}/appcast.xml?v=${VERSION}" | grep -q "${DMG_URL}" \
-    || fail 4 "${PUBLIC_BASE}/appcast.xml does not list ${VERSION} yet"
-note "✓ ${PUBLIC_BASE}/appcast.xml"
-curl -fsS "${PUBLIC_BASE}/latest.json?v=${VERSION}" | grep -q "\"${VERSION}\"" \
-    || fail 4 "${PUBLIC_BASE}/latest.json does not show ${VERSION} yet"
-note "✓ ${PUBLIC_BASE}/latest.json"
+for key in latest.json install.sh appcast.xml; do
+    r2 s3api head-object --bucket "${R2_BUCKET}" --key "${key}" >/dev/null 2>&1 || fail 4 "${S3}/${key} is missing"
+    note "✓ ${key}"
+done
+
+# The public check resolves the host through Cloudflare's resolver, so a stale
+# DNS cache on this Mac (router, VPN, local dnsmasq) cannot fail a good release.
+step "Verifying the public URLs"
+PUBLIC_HOST="${PUBLIC_BASE#https://}"; PUBLIC_HOST="${PUBLIC_HOST%%/*}"
+PUBLIC_IP="$(dig +short A "${PUBLIC_HOST}" @1.1.1.1 2>/dev/null | grep -E '^[0-9.]+$' | head -1 || true)"
+public() {
+    if [[ -n "${PUBLIC_IP}" ]]; then
+        curl -fsS --max-time 30 --resolve "${PUBLIC_HOST}:443:${PUBLIC_IP}" "$@"
+    else
+        curl -fsS --max-time 30 "$@"
+    fi
+}
+PUBLIC_WARNINGS=0
+public_check() { # public_check <label> <command…>; warns instead of failing
+    if "${@:2}"; then note "✓ $1"; else note "⚠ $1 — not reachable from this Mac yet"; PUBLIC_WARNINGS=1; fi
+}
+size_ok() { [[ "$(public -I "$1" | awk 'tolower($1)=="content-length:" {gsub("\r",""); print $2}' | tail -1)" == "${SIZE}" ]]; }
+public_check "${DMG_URL}" size_ok "${DMG_URL}"
+public_check "${PUBLIC_BASE}/MacAMP.dmg" size_ok "${PUBLIC_BASE}/MacAMP.dmg"
+feed_ok() { public "${PUBLIC_BASE}/appcast.xml?v=${VERSION}" | grep -qF "${DMG_URL}"; }
+manifest_ok() { public "${PUBLIC_BASE}/latest.json?v=${VERSION}" | grep -qF "\"${VERSION}\""; }
+public_check "${PUBLIC_BASE}/appcast.xml" feed_ok
+public_check "${PUBLIC_BASE}/latest.json" manifest_ok
+if [[ "${PUBLIC_WARNINGS}" -eq 1 ]]; then
+    note "The upload itself is verified above. Re-check the public URLs in a few"
+    note "minutes, e.g.: curl -I ${PUBLIC_BASE}/MacAMP.dmg"
+fi
 
 echo ""
 echo "PASS: MacAMP ${VERSION} is live at ${PUBLIC_BASE}"

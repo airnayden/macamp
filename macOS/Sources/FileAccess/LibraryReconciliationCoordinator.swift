@@ -97,9 +97,13 @@ public actor LibraryReconciliationCoordinator {
         // root. Errors are non-fatal here — a transient write failure is retried
         // on the next change.
         _ = try? reconciler.reconcile() // reconcile result intentionally discarded
+        // A removed folder takes its tracks with it, unless another configured
+        // folder (in any profile) still covers them. The sweep then clears
+        // missing tracks left outside every folder by earlier removals.
         for path in removedRoots.sorted() {
-            _ = try? reconciler.markMissing(rootPath: path)
+            _ = try? reconciler.removeTracks(underRemovedRoot: path)
         }
+        _ = try? reconciler.pruneOrphanedMissingTracks()
         passCount += 1
     }
 

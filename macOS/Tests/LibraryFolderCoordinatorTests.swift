@@ -39,11 +39,11 @@ struct LibraryFolderCoordinatorTests {
         #expect(harness.toast.activeToast?.text == String(localized: FileAccessStrings.libraryRefreshed))
     }
 
-    @Test("sidebar path removal clears the folder and retains missing tracks")
-    func standardizedRemovalRetainsMissingRows() async throws {
+    @Test("sidebar path removal clears the folder and removes its tracks from the library")
+    func standardizedRemovalRemovesTheFoldersTracks() async throws {
         let root = URL(fileURLWithPath: "/Music/Remove")
         let harness = try LibraryFolderHarness(initialRoots: [root])
-        try harness.insertTrack(root: root, title: "Recoverable")
+        try harness.insertTrack(root: root, title: "Removed With Folder")
         harness.coordinator.refreshProfileScope()
         await harness.coordinator.waitForIdle()
         harness.resetProjectionCount()
@@ -53,9 +53,9 @@ struct LibraryFolderCoordinatorTests {
 
         #expect(removed)
         #expect(harness.access.roots.isEmpty)
-        let fetched = try harness.track(title: "Recoverable")
-        let retained = try #require(fetched)
-        #expect(retained.availability == .missing)
+        // The folder is gone from every profile, so its tracks leave the library
+        // instead of lingering in All Tracks as "missing" loose files.
+        #expect(try harness.track(title: "Removed With Folder") == nil)
         #expect(harness.coordinator.sidebar.nodes.isEmpty)
         #expect(harness.coordinator.sidebar.visibleNodes.isEmpty)
         #expect(harness.contentRefreshCount == 1)
@@ -79,7 +79,7 @@ struct LibraryFolderCoordinatorTests {
         #expect(harness.coordinator.sidebar.nodes.map(\.path) == ["/Music/Second"])
     }
 
-    @Test("filesystem aliases share one canonical root for sidebar and missing reconciliation")
+    @Test("filesystem aliases share one canonical root for sidebar and track removal")
     func filesystemAliasesShareCanonicalRoot() async throws {
         let configuredRoot = URL(fileURLWithPath: "/var/tmp")
         let canonicalRoot = URL(fileURLWithPath: "/private/var/tmp")
@@ -97,9 +97,8 @@ struct LibraryFolderCoordinatorTests {
         await harness.coordinator.waitForIdle()
 
         #expect(removed)
-        let aliasTrack = try harness.track(title: "Alias Track")
-        let fetched = try #require(aliasTrack)
-        #expect(fetched.availability == .missing)
+        // Removing the alias removes the tracks stored under the canonical path.
+        #expect(try harness.track(title: "Alias Track") == nil)
     }
 }
 

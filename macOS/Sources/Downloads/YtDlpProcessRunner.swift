@@ -102,6 +102,11 @@ private final class ToolChildProcess: @unchecked Sendable {
     private let process = Process()
     private let output = Pipe()
     private let errors = Pipe()
+    /// Readability-handler invocations currently running. ``handleExit(of:)`` waits
+    /// for them before it finishes the stream: a handler that has already taken a
+    /// chunk off the pipe would otherwise yield its lines into a finished stream,
+    /// and a fast-exiting tool's whole output would be lost.
+    private let readsInFlight = DispatchGroup()
     private let grace: Duration
 
     private var continuation: AsyncThrowingStream<ToolOutputEvent, any Error>.Continuation?
@@ -158,10 +163,16 @@ private final class ToolChildProcess: @unchecked Sendable {
 
     private func installReaders() {
         output.fileHandleForReading.readabilityHandler = { [weak self] handle in
-            self?.ingest(handle.availableData, isError: false)
+            guard let self else { return }
+            readsInFlight.enter()
+            defer { readsInFlight.leave() }
+            ingest(handle.availableData, isError: false)
         }
         errors.fileHandleForReading.readabilityHandler = { [weak self] handle in
-            self?.ingest(handle.availableData, isError: true)
+            guard let self else { return }
+            readsInFlight.enter()
+            defer { readsInFlight.leave() }
+            ingest(handle.availableData, isError: true)
         }
     }
 
@@ -223,6 +234,11 @@ private final class ToolChildProcess: @unchecked Sendable {
     /// The child exited on its own. Drains what is left in the pipes, reports the
     /// termination (unless this was a cancellation) and finishes the stream.
     private func handleExit(of exited: Process) {
+        // Stop new reads, then let any read already in progress deliver its lines
+        // while the stream is still open. Bounded, so a wedged handler can never
+        // hold up teardown; whatever it has not consumed is drained below.
+        clearReaders()
+        _ = readsInFlight.wait(timeout: .now() + .seconds(2))
         lock.lock()
         guard !isTornDown else { return lock.unlock() }
         isTornDown = true

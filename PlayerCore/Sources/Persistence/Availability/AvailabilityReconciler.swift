@@ -35,6 +35,16 @@ public protocol AvailabilityReconciling: Sendable {
     /// root is added again and scanned.
     @discardableResult
     func markMissing(rootPath: String) throws -> Int
+
+    /// Removes the tracks under a library folder the user just removed, unless a
+    /// folder still configured in any profile covers them. See
+    /// `AvailabilityReconciler+Pruning.swift`.
+    @discardableResult
+    func removeTracks(underRemovedRoot rootPath: String) throws -> Int
+
+    /// Removes missing tracks that no configured folder in any profile covers.
+    @discardableResult
+    func pruneOrphanedMissingTracks() throws -> Int
 }
 
 /// The outcome of a single ``AvailabilityReconciling/reconcile()`` pass.
@@ -93,7 +103,7 @@ public struct AvailabilityReconcileSummary: Sendable, Equatable {
 /// The cursor streams the table — it never `fetchAll`s the whole library,
 /// honouring the windowed-query budget at 100k scale.
 public struct AvailabilityReconciler: AvailabilityReconciling {
-    private let dbWriter: any DatabaseWriter
+    let dbWriter: any DatabaseWriter
     private let fileSystem: any FileSystemProbing
 
     /// - Parameters:
