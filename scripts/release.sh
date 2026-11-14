@@ -55,7 +55,10 @@
 #   [8] PUBLISH    Only with --publish: scripts/publish-r2.sh uploads the
 #                  image, deltas, latest.json, install.sh and (last) the
 #                  appcast to the R2 bucket behind downloads.macamp.si. It asks
-#                  for confirmation unless --yes is also passed.
+#                  for confirmation unless --yes is also passed. Then
+#                  scripts/github-release.sh tags v<version> (which deploys the
+#                  docs) and creates the GitHub Release page that links to the
+#                  download. Notes come from release-notes/<version>.md if present.
 #
 # Usage:
 #   scripts/release.sh --version 1.2.3                  # ad-hoc release
@@ -89,6 +92,8 @@
 #   --publish         Run stage [8]: upload the release to R2 (needs the R2 keys
 #                     in the Keychain; see scripts/publish-r2.sh --help).
 #   --yes             With --publish: skip the confirmation prompt.
+#   --skip-github     With --publish: upload to R2 but don't tag or create the
+#                     GitHub Release (run scripts/github-release.sh later).
 #   -h | --help       This text.
 #
 # Env:
@@ -135,6 +140,7 @@ KEEP_INSTALLS=0
 SKIP_APPCAST=0
 PUBLISH=0
 ASSUME_YES=0
+SKIP_GITHUB=0
 VERSION=""
 OUTPUT_DIR=""
 IDENTITY="${DEVELOPER_ID_APPLICATION:-}"
@@ -150,6 +156,7 @@ while [[ $# -gt 0 ]]; do
         --skip-appcast) SKIP_APPCAST=1; shift ;;
         --publish) PUBLISH=1; shift ;;
         --yes) ASSUME_YES=1; shift ;;
+        --skip-github) SKIP_GITHUB=1; shift ;;
         --version) [[ $# -ge 2 ]] || die "--version needs a value"; VERSION="$2"; shift 2 ;;
         --output-dir) [[ $# -ge 2 ]] || die "--output-dir needs a path"; OUTPUT_DIR="$2"; shift 2 ;;
         --identity) [[ $# -ge 2 ]] || die "--identity needs a value"; IDENTITY="$2"; shift 2 ;;
@@ -170,6 +177,20 @@ esac
 [[ -n "${OUTPUT_DIR}" ]] || OUTPUT_DIR="${REPO_ROOT}/dist"
 if [[ "${PUBLISH}" -eq 1 && "${SKIP_APPCAST}" -eq 1 ]]; then
     die "--publish needs the appcast; drop --skip-appcast"
+fi
+# The GitHub step tags HEAD after the R2 upload; catch what would stop it there
+# now, before a long build and an upload have already happened.
+if [[ "${PUBLISH}" -eq 1 && "${SKIP_GITHUB}" -eq 0 && "${DRY_RUN}" -eq 0 ]]; then
+    command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1 \
+        || die "--publish also creates the GitHub Release and needs the GitHub CLI signed in:
+       brew install gh && gh auth login     (or pass --skip-github)"
+    if ! git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null; then
+        [[ -z "$(git status --porcelain)" ]] \
+            || die "--publish tags this commit as v${VERSION}: commit your changes first (or pass --skip-github)"
+        git fetch -q origin 2>/dev/null || true
+        git branch -r --contains HEAD 2>/dev/null | grep -q 'origin/' \
+            || die "--publish tags this commit as v${VERSION}: git push it to GitHub first (or pass --skip-github)"
+    fi
 fi
 case "${OUTPUT_DIR}" in /*) ;; *) OUTPUT_DIR="${REPO_ROOT}/${OUTPUT_DIR}" ;; esac
 
@@ -1183,6 +1204,7 @@ if [[ "${PUBLISH}" -eq 0 ]]; then
     summary "publish:      not requested"
 elif [[ "${DRY_RUN}" -eq 1 ]]; then
     plan "scripts/publish-r2.sh --version ${VERSION} --output-dir ${OUTPUT_DIR}"
+    [[ "${SKIP_GITHUB}" -eq 1 ]] || plan "scripts/github-release.sh --version ${VERSION} --output-dir ${OUTPUT_DIR}"
     summary "publish:      planned (dry-run)"
 else
     PUBLISH_ARGS=(--version "${VERSION}" --output-dir "${OUTPUT_DIR}")
@@ -1191,6 +1213,16 @@ else
     "${SCRIPT_DIR}/publish-r2.sh" "${PUBLISH_ARGS[@]}" || PUBLISH_RC=$?
     [[ "${PUBLISH_RC}" -eq 0 ]] || fail 9 "[8] PUBLISH — publish-r2.sh exited ${PUBLISH_RC}"
     summary "publish:      live at https://downloads.macamp.si"
+    if [[ "${SKIP_GITHUB}" -eq 1 ]]; then
+        note "GitHub Release skipped (--skip-github); later: scripts/github-release.sh --version ${VERSION}"
+        summary "github:       skipped"
+    else
+        GITHUB_RC=0
+        "${SCRIPT_DIR}/github-release.sh" --version "${VERSION}" --output-dir "${OUTPUT_DIR}" || GITHUB_RC=$?
+        [[ "${GITHUB_RC}" -eq 0 ]] || fail 9 "[8] PUBLISH — the download is live, but github-release.sh exited ${GITHUB_RC}.
+      Fix the cause and run: scripts/github-release.sh --version ${VERSION}"
+        summary "github:       https://github.com/airnayden/macamp/releases/tag/v${VERSION}"
+    fi
 fi
 
 # =============================================================================

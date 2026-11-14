@@ -260,6 +260,6 @@ fi
 
 echo ""
 echo "PASS: MacAMP ${VERSION} is live at ${PUBLIC_BASE}"
-echo "      Next: tag the source (git tag v${VERSION} && git push origin v${VERSION})"
-echo "      so the docs redeploy and the release is traceable."
+echo "      Next: scripts/github-release.sh --version ${VERSION} tags v${VERSION}"
+echo "      (deploying the docs) and creates the GitHub Release page."
 exit 0

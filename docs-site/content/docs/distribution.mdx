@@ -500,6 +500,10 @@ scripts/make-appcast.sh --archives dist/releases --output dist/appcast.xml
 
 # 6. Upload to R2: archives first, the appcast last (see scripts/publish-r2.sh).
 scripts/publish-r2.sh --version 1.2.3
+
+# 7. Tag v1.2.3 (deploys the docs) and create the GitHub Release page that links
+#    to the download. Notes come from release-notes/1.2.3.md if it exists.
+scripts/github-release.sh --version 1.2.3
 ```
 
 ### Why inside-out signing matters
