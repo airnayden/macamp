@@ -224,7 +224,9 @@ struct MCPClientManagerTests {
 
     @Test("A call that outruns its budget fails with timeout rather than hanging")
     func aSlowCallTimesOut() async throws {
-        let stack = Self.makeStack(timeoutSeconds: 0.2) { _ in
+        // The budget also covers the handshake in listTools(), so it needs headroom
+        // on a busy CI runner; the 30 s handler still has to be cut off.
+        let stack = Self.makeStack(timeoutSeconds: 2) { _ in
             try await Task.sleep(for: .seconds(30))
             return CallTool.Result(content: [Self.textContent("too late")])
         }
