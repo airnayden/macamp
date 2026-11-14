@@ -11,26 +11,71 @@ description: How to install MacAMP on macOS and iOS, how to get past Gatekeeper 
 - **A Mac with Apple silicon** (M1 or newer). Intel Macs aren't supported.
 - **macOS 15 (Sequoia) or later for Karaoke (vocal removal).** The on-device separation model needs an attention operation that doesn't exist before macOS 15; on macOS 14 Karaoke shows as *Unavailable* and everything else works normally.
 
-### Install from Terminal (one line)
+### Install
 
-The quickest way, and it skips the Gatekeeper step below. Open **Terminal** and paste:
+There are two ways in. The Terminal one-liner is the quickest, and MacAMP opens without any security prompt.
 
-```sh
+<Tabs items={['Terminal (recommended)', 'Disk image (.dmg)']}>
+<Tab value="Terminal (recommended)">
+
+Open **Terminal** (press **⌘ Space**, type *Terminal*, press **Return**), paste this line and press **Return**:
+
+```sh title="Terminal"
 curl -fsSL https://downloads.macamp.si/install.sh | bash
 ```
 
-The installer downloads the latest release from `downloads.macamp.si`, checks its SHA-256 checksum, copies **MacAMP.app** into **Applications** (replacing an older copy) and opens it. Nothing else on your Mac is touched. It's a short script you can [read first](https://github.com/airnayden/macamp/blob/main/scripts/install.sh). Run the same line again any time to reinstall.
+The installer:
 
-### Download and open the DMG
+- downloads the latest release from `downloads.macamp.si` and checks its SHA-256 checksum,
+- copies **MacAMP.app** into **Applications**, replacing an older copy,
+- opens MacAMP.
 
-1. Download the latest DMG from [macamp.si/download](https://macamp.si/download/).
-2. Double-click the DMG to mount it.
-3. Drag **MacAMP.app** into your **Applications** folder.
-4. Eject the DMG.
+Nothing else on your Mac is touched, and the Gatekeeper step below doesn't apply. It's a short script you can [read first](https://github.com/airnayden/macamp/blob/main/scripts/install.sh). Run the same line again any time to reinstall.
 
-> The download is large (roughly 400 MB) because the Karaoke vocal-separation model ships inside the app. Older versions stay available at `https://downloads.macamp.si/releases/MacAMP-<version>.dmg`.
+<details>
+<summary>Options</summary>
+
+Pass options after `bash -s --`:
+
+```sh
+# install without opening MacAMP afterwards
+curl -fsSL https://downloads.macamp.si/install.sh | bash -s -- --no-open
+
+# install somewhere other than /Applications
+curl -fsSL https://downloads.macamp.si/install.sh | bash -s -- --dir ~/Applications
+```
+
+</details>
+
+</Tab>
+<Tab value="Disk image (.dmg)">
+
+<Steps>
+<Step>
+
+Download the latest DMG from [macamp.si/download](https://macamp.si/download/).
+
+</Step>
+<Step>
+
+Double-click the DMG to open it, then drag **MacAMP.app** into your **Applications** folder.
+
+</Step>
+<Step>
+
+Eject the DMG, then open MacAMP from Applications. The first time, macOS asks you to approve it: follow [getting past Gatekeeper](#first-launch--getting-past-gatekeeper) below.
+
+</Step>
+</Steps>
+
+</Tab>
+</Tabs>
+
+> The download is about 550 MB because the Karaoke vocal-separation model and the YouTube download tools ship inside the app. Older versions stay available at `https://downloads.macamp.si/releases/MacAMP-<version>.dmg`.
 
 ### First launch — getting past Gatekeeper
+
+*Only for the disk image. Installed with the Terminal command? Skip ahead to [the app itself](#first-launch--the-app-itself).*
 
 **Which build do you have?**
 
