@@ -216,7 +216,7 @@ final class MenuPruningDelegate: NSObject, NSApplicationDelegate {
     private func prune() {
         guard let mainMenu = NSApp.mainMenu else { return }
         let undo = Selector(("undo:"))
-        let showHelp = Selector(("showHelp:"))
+        let showHelp = #selector(NSApplication.showHelp(_:))
         let helpTitle = NSLocalizedString("Help", tableName: nil, bundle: .init(for: NSApplication.self), comment: "")
         for item in mainMenu.items {
             guard let submenu = item.submenu else { continue }

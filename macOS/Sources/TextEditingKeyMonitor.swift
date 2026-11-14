@@ -42,10 +42,10 @@ final class TextEditingKeyMonitor {
         else { return false }
 
         let action: Selector? = switch key {
-        case "a" where flags == .command: Selector(("selectAll:"))
-        case "x" where flags == .command: Selector(("cut:"))
-        case "c" where flags == .command: Selector(("copy:"))
-        case "v" where flags == .command: Selector(("paste:"))
+        case "a" where flags == .command: #selector(NSText.selectAll(_:))
+        case "x" where flags == .command: #selector(NSText.cut(_:))
+        case "c" where flags == .command: #selector(NSText.copy(_:))
+        case "v" where flags == .command: #selector(NSText.paste(_:))
         case "z" where flags == .command: Selector(("undo:"))
         case "z" where flags == [.command, .shift]: Selector(("redo:"))
         default: nil

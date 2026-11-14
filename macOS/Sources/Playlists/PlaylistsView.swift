@@ -223,7 +223,7 @@ private extension PlaylistsView {
 
     func create(named name: String) {
         Task {
-            try? await model.createPlaylist(named: name)
+            _ = try? await model.createPlaylist(named: name)
             try? await model.loadInitialPlaylists()
         }
     }
@@ -238,7 +238,7 @@ private extension PlaylistsView {
     func delete(_ playlist: PlaylistRecord) {
         guard let playlistId = playlist.id else { return }
         Task {
-            try? await model.deletePlaylist(id: playlistId)
+            _ = try? await model.deletePlaylist(id: playlistId)
             try? await model.loadInitialPlaylists()
         }
     }

@@ -276,7 +276,7 @@ private extension PlaylistsScreen {
 
     func create(named name: String) {
         Task {
-            try? await environment.playlists.createPlaylist(named: name)
+            _ = try? await environment.playlists.createPlaylist(named: name)
             try? await environment.playlists.loadInitialPlaylists()
         }
     }
@@ -291,7 +291,7 @@ private extension PlaylistsScreen {
     func delete(_ playlist: PlaylistRecord) {
         guard let playlistId = playlist.id else { return }
         Task {
-            try? await environment.playlists.deletePlaylist(id: playlistId)
+            _ = try? await environment.playlists.deletePlaylist(id: playlistId)
             try? await environment.playlists.loadInitialPlaylists()
         }
     }
