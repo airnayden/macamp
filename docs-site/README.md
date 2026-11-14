@@ -39,8 +39,9 @@ The docs share the marketing site's synthwave theme (dark-only, forced in `compo
 - **Header, sidebar card, footer links:** `components/brand.tsx` and `lib/layout.shared.tsx`.
 - **Guide home banner:** `components/guide-hero.tsx`, used as `<GuideHero />` in `content/docs/index.mdx`.
 - **Web Analytics:** the Cloudflare beacon in `app/layout.tsx` takes its token from the
-  `DOCS_ANALYTICS_TOKEN` environment variable at build time (a GitHub Actions repository variable in
-  CI). No keys live in the repo; a build without it simply has no beacon.
+  `DOCS_ANALYTICS_TOKEN` environment variable at build time. In CI it's a secret of the
+  `docs-production` environment, so only the deploy job's build has it. No keys live in the repo;
+  a build without it simply has no beacon.
 - **URLs:** `docsUrl` (docs.macamp.si), `websiteUrl` (macamp.si), `githubUrl` (github.com/airnayden/macamp) and the `author` credit live in `lib/shared.ts`.
 
 ## Conventions

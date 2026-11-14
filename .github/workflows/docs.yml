@@ -7,9 +7,10 @@ name: Docs
 # `docs-production` environment, which only v* tags may use, so branches,
 # pull requests and forks never see the token.
 #
-# The build bakes the Web Analytics beacon into every page from DOCS_ANALYTICS_TOKEN,
-# a repository variable (Settings > Secrets and variables > Actions > Variables), so
-# the token stays out of the repo. Without it the docs build fine but count nothing.
+# The deploy job builds the pages it ships itself, because only it can read
+# `docs-production`, which also holds DOCS_ANALYTICS_TOKEN (the Web Analytics token
+# baked into every page; kept out of the repo). Without it the docs still deploy but
+# count nothing. The build job checks every push and pull request.
 
 on:
   push:
@@ -50,20 +51,7 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Build static site
-        env:
-          DOCS_ANALYTICS_TOKEN: ${{ vars.DOCS_ANALYTICS_TOKEN }}
-        run: |
-          [ -n "$DOCS_ANALYTICS_TOKEN" ] || echo "::warning::DOCS_ANALYTICS_TOKEN is not set: this build has no Web Analytics beacon."
-          npm run build
-
-      - name: Upload the export
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-artifact@v7
-        with:
-          name: docs-out
-          path: docs-site/out
-          include-hidden-files: true
-          retention-days: 7
+        run: npm run build
 
   deploy:
     name: Deploy to docs.macamp.si
@@ -87,14 +75,15 @@ jobs:
           cache: npm
           cache-dependency-path: docs-site/package-lock.json
 
-      - name: Install wrangler (pinned in package-lock.json)
+      - name: Install dependencies (wrangler is pinned in package-lock.json)
         run: npm ci --no-audit --no-fund
 
-      - name: Download the export
-        uses: actions/download-artifact@v8
-        with:
-          name: docs-out
-          path: docs-site/out
+      - name: Build static site with the Web Analytics token
+        env:
+          DOCS_ANALYTICS_TOKEN: ${{ secrets.DOCS_ANALYTICS_TOKEN }}
+        run: |
+          [ -n "$DOCS_ANALYTICS_TOKEN" ] || echo "::warning::DOCS_ANALYTICS_TOKEN is not set in docs-production: this deploy has no Web Analytics beacon."
+          npm run build
 
       - name: Deploy
         env:
