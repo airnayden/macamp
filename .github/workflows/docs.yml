@@ -6,6 +6,10 @@ name: Docs
 # The deploy job reads CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID from the
 # `docs-production` environment, which only v* tags may use, so branches,
 # pull requests and forks never see the token.
+#
+# The build bakes the Web Analytics beacon into every page from DOCS_ANALYTICS_TOKEN,
+# a repository variable (Settings > Secrets and variables > Actions > Variables), so
+# the token stays out of the repo. Without it the docs build fine but count nothing.
 
 on:
   push:
@@ -46,7 +50,11 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Build static site
-        run: npm run build
+        env:
+          DOCS_ANALYTICS_TOKEN: ${{ vars.DOCS_ANALYTICS_TOKEN }}
+        run: |
+          [ -n "$DOCS_ANALYTICS_TOKEN" ] || echo "::warning::DOCS_ANALYTICS_TOKEN is not set: this build has no Web Analytics beacon."
+          npm run build
 
       - name: Upload the export
         if: startsWith(github.ref, 'refs/tags/v')

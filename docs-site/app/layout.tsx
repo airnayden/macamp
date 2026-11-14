@@ -31,9 +31,10 @@ const script = localFont({
   display: 'swap',
 });
 
-// Cloudflare Web Analytics site token for docs.macamp.si: cookieless, aggregate
-// page views. Public by design (it ships in every page).
-const analyticsToken = '092c44ceb2ea4523a31df11afa480a32';
+// Cloudflare Web Analytics site token for docs.macamp.si (cookieless, aggregate page
+// views). It comes from the DOCS_ANALYTICS_TOKEN build variable, a GitHub Actions
+// repository variable; without it there's no beacon.
+const analyticsToken = process.env.DOCS_ANALYTICS_TOKEN?.trim();
 
 export const metadata: Metadata = {
   metadataBase: new URL(docsUrl),
@@ -62,7 +63,7 @@ export default function Layout({ children }: LayoutProps<'/'>) {
     >
       <body className="flex flex-col min-h-screen">
         <Provider>{children}</Provider>
-        {process.env.NODE_ENV === 'production' && (
+        {process.env.NODE_ENV === 'production' && analyticsToken && (
           <script
             defer
             src="https://static.cloudflareinsights.com/beacon.min.js"
