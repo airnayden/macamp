@@ -6,7 +6,7 @@
 
 **A native music player for the music you own. Built for macOS, with neon to spare.**
 
-[Website](https://macamp.si) · [Download](https://macamp.si/download/) · [User guide](https://docs.macamp.si/docs/) · [Developer guide](DEVELOPMENT.md)
+[Website](https://macamp.si) · [Download](https://macamp.si/download/) · [User guide](https://docs.macamp.si/) · [Developer guide](DEVELOPMENT.md)
 
 [![CI](https://github.com/airnayden/macamp/actions/workflows/ci.yml/badge.svg)](https://github.com/airnayden/macamp/actions/workflows/ci.yml)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-ff2975)
@@ -57,13 +57,13 @@ curl -fsSL https://downloads.macamp.si/install.sh | bash
 
 The [installer](scripts/install.sh) checks the download's SHA-256, copies MacAMP into Applications and opens it.
 
-MacAMP is distributed directly, not through the App Store, and updates itself with [Sparkle](https://sparkle-project.org). Until releases are notarized, macOS asks you to approve a downloaded DMG once (the Terminal install skips this): open **System Settings › Privacy & Security** and click **Open Anyway**. The [install guide](https://docs.macamp.si/docs/install/) walks through it.
+MacAMP is distributed directly, not through the App Store, and updates itself with [Sparkle](https://sparkle-project.org). Until releases are notarized, macOS asks you to approve a downloaded DMG once (the Terminal install skips this): open **System Settings › Privacy & Security** and click **Open Anyway**. The [install guide](https://docs.macamp.si/install/) walks through it.
 
 **iPhone and iPad:** a beta built on the same core is in progress. See [`iOS/README.md`](iOS/README.md) for its status.
 
 ## Privacy
 
-Playback, karaoke, stats and your library stay on your Mac. AI features are opt-in: with a local Ollama server nothing leaves your Mac, and with a cloud provider MacAMP shows exactly what may be shared before anything is sent. File paths, audio, artwork and lyrics are never sent to any model. Details: [AI features](https://docs.macamp.si/docs/intelligence/).
+Playback, karaoke, stats and your library stay on your Mac. AI features are opt-in: with a local Ollama server nothing leaves your Mac, and with a cloud provider MacAMP shows exactly what may be shared before anything is sent. File paths, audio, artwork and lyrics are never sent to any model. Details: [AI features](https://docs.macamp.si/intelligence/).
 
 ## Build from source
 

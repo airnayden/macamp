@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: docs-production
-      url: https://docs.macamp.si/docs/
+      url: https://docs.macamp.si/
     concurrency:
       group: docs-production
       cancel-in-progress: false

@@ -1,2 +1,4 @@
-# Cloudflare Workers static assets: the site is documentation-only.
-/  /docs/  301
+# Cloudflare Workers static assets.
+# The guide lived under /docs/ until v1.0.1; keep every old link working.
+/docs     /         301
+/docs/*   /:splat   301

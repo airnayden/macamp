@@ -7,8 +7,8 @@ export const siteName = 'MacAMP Docs';
 export const siteDescription =
   'The MacAMP user guide: install, import, playback, the AI assistant, YouTube downloads, karaoke, listening stats and every setting.';
 
-/** Base route the documentation is mounted at. */
-export const docsRoute = '/docs';
+/** Base route the documentation is mounted at: the site root, since the guide has its own subdomain. */
+export const docsRoute = '/';
 
 /** Where these docs are deployed (canonical URLs, Open Graph). */
 export const docsUrl = 'https://docs.macamp.si';

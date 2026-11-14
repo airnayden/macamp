@@ -24,7 +24,7 @@ npm run types:check
 | `lib/source.ts`           | Content source — `defineDocs` (Macro API) + [`loader()`](https://fumadocs.dev/docs/headless/source-api). |
 | `lib/shared.ts`           | Site name, nav title, docs base route.                               |
 | `lib/layout.shared.tsx`   | Shared layout options (nav).                                         |
-| `app/docs/`               | Docs layout and the catch-all page.                                  |
+| `app/(docs)/`             | Docs layout and the catch-all page, served from the site root.       |
 | `app/api/search/route.ts` | Search index, pre-rendered via `staticGET` (Orama static client).     |
 
 ## Look and feel

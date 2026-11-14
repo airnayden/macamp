@@ -16,7 +16,7 @@ export function GuideHero() {
         every setting in between.
       </p>
       <div className="mac-hero-actions">
-        <a className="mac-btn mac-btn-primary" href="/docs/install/">
+        <a className="mac-btn mac-btn-primary" href="/install/">
           <Download size={16} aria-hidden="true" /> Start with install
         </a>
         <a className="mac-btn mac-btn-ghost" href={site('/features/')}>

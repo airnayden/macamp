@@ -7,7 +7,7 @@ export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
       title: <Logo />,
-      url: '/docs/',
+      url: '/',
     },
     // PLACEHOLDER repository — see `githubUrl` in lib/shared.ts.
     githubUrl,

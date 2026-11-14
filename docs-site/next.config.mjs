@@ -9,7 +9,7 @@ const config = {
   // Don't generate AGENTS.md on `next dev`.
   agentRules: false,
   // Emit `out/<route>/index.html` so the export works on any plain static host,
-  // and so relative in-page links (`./install`) resolve against `/docs/…`.
+  // and so relative in-page links (`./install`) resolve against the page's own folder.
   trailingSlash: true,
   images: {
     // `next/image` optimization needs a server; the export must stay serverless.

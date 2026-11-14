@@ -36,7 +36,7 @@ cd "${REPO_ROOT}"
 
 REPO="airnayden/macamp"
 PUBLIC_BASE="https://downloads.macamp.si"
-DOCS_URL="https://docs.macamp.si/docs/install/"
+DOCS_URL="https://docs.macamp.si/install/"
 
 VERSION=""
 OUTPUT_DIR=""

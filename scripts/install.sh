@@ -97,7 +97,7 @@ main() {
 
     say ""
     say "MacAMP ${version} is installed in ${install_dir}."
-    say "Guide: https://docs.macamp.si/docs/ · Updates arrive inside the app."
+    say "Guide: https://docs.macamp.si/ · Updates arrive inside the app."
     if [[ "${open_app}" -eq 1 ]]; then
         open "${target}"
     fi
