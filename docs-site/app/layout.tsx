@@ -31,6 +31,10 @@ const script = localFont({
   display: 'swap',
 });
 
+// Cloudflare Web Analytics site token for docs.macamp.si: cookieless, aggregate
+// page views. Public by design (it ships in every page).
+const analyticsToken = '092c44ceb2ea4523a31df11afa480a32';
+
 export const metadata: Metadata = {
   metadataBase: new URL(docsUrl),
   title: {
@@ -58,6 +62,13 @@ export default function Layout({ children }: LayoutProps<'/'>) {
     >
       <body className="flex flex-col min-h-screen">
         <Provider>{children}</Provider>
+        {process.env.NODE_ENV === 'production' && (
+          <script
+            defer
+            src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon={JSON.stringify({ token: analyticsToken })}
+          />
+        )}
       </body>
     </html>
   );
