@@ -1,6 +1,6 @@
 ---
 title: Distribution
-description: Release runbook for the direct-distribution macOS build of MacAMP — ad-hoc and Developer-ID signing, Sparkle auto-update, notarization, and CI release pipeline.
+description: Release runbook for the direct-distribution macOS build of MacAMP — ad-hoc and Developer-ID signing, Sparkle auto-update, notarization, and publishing to downloads.macamp.si and GitHub Releases.
 ---
 
 This is the release runbook for the **direct-distribution** macOS build of MacAMP
@@ -22,12 +22,46 @@ There are **two signing modes**, and the pipeline supports both end to end:
 
 ---
 
+## 0. One-time setup on the release Mac
+
+Releases are built and published **locally**; CI never builds or uploads them.
+Everything below is needed once per Mac.
+
+| What | Needed for | Set up with |
+|---|---|---|
+| Xcode 26, [Tuist](https://tuist.dev), Mint | every build | `brew install tuist mint` |
+| [uv](https://docs.astral.sh/uv/) | first build only (karaoke model conversion) | `brew install uv` |
+| Sparkle EdDSA signing key in the login Keychain | the appcast (stage 6) | `scripts/setup-sparkle-key.sh` (see [2.1](#21-one-time-eddsa-key-setup)) |
+| AWS CLI (R2 speaks the S3 API) | `--publish` | `brew install awscli` |
+| R2 upload keys in the login Keychain | `--publish` | see below |
+| GitHub CLI, signed in | `--publish` (tag + GitHub Release) | `brew install gh && gh auth login` |
+
+The R2 keys come from an R2 **Account API token** with *Object Read & Write* on the
+`macamp-downloads` bucket only. Store both halves in the Keychain; each command
+prompts for the value, so nothing lands in your shell history:
+
+```sh
+security add-generic-password -s macamp-r2 -a access-key-id -w
+security add-generic-password -s macamp-r2 -a secret-access-key -w
+```
+
+For `gh auth login`, choose **GitHub.com → HTTPS → Login with a web browser**. The
+release step only tags commits and creates release pages; it doesn't use GitHub
+Actions, so Actions billing or limits never block a release.
+
+---
+
 ## 1. The one-command release
 
 ```sh
-# Everything: model → build → sign → dmg → notarize → appcast → verify
-./scripts/release.sh --version 1.2.3
+# Everything: model → build → sign → dmg → notarize → appcast → verify → publish
+./scripts/release.sh --version 1.2.3 --keep-installs --publish
 ```
+
+Write the notes first as `release-notes/1.2.3.md` (plain Markdown bullets); they
+become the **What's new** section of the GitHub Release page. Commit and push
+before you run it: `--publish` tags the current commit as `v1.2.3`, and it checks
+that the commit is on GitHub and `gh` is signed in *before* the long build starts.
 
 `scripts/release.sh` is a **pure orchestrator**. Every unit of real work belongs to
 a script that already exists and is independently runnable; `release.sh` only
@@ -47,6 +81,8 @@ produce a broken artifact*. It never re-implements a step.
 | **6** | `APPCAST` | **verifies** (never generates) the Sparkle EdDSA key, archives the `.dmg` into `dist/releases/`, runs `scripts/make-appcast.sh` over that directory, and asserts the emitted feed really carries a `sparkle:edSignature` | `7` |
 | **7** | `VERIFY` | `codesign -dv`, `spctl --assess`, `hdiutil verify`, `codesign --verify --deep --strict`, the compiled `MelBandRoformer.mlmodelc` and `libprojectM-4.4.dylib` inside the bundle, the bundled downloader tools (the `yt-dlp` tree with a non-empty `_internal/`, `ffmpeg`/`ffprobe`, the three GPLv3 texts, an exec smoke, the one-directory shape probe, and the ffmpeg `--enable-gpl` licence gate), measured sizes, and a `dist/RELEASE-NOTES-<v>.md` stub | `8` |
 
+| **8** | `PUBLISH` | Only with `--publish`. `scripts/publish-r2.sh` uploads to the R2 bucket behind `downloads.macamp.si`: the `.dmg` and any deltas into `releases/`, then `install.sh`, a `MacAMP.dmg` copy of the newest image, `latest.json` and — **last** — `appcast.xml`, and verifies every object through the R2 API. Then `scripts/github-release.sh` tags `v<version>` (which deploys the docs) and creates the GitHub Release page linking to the download. Asks before uploading unless `--yes` | `9` |
+
 Exit `0` = release produced (or dry-run plan printed).
 
 ### Flags
@@ -60,6 +96,9 @@ Exit `0` = release produced (or dry-run plan printed).
 | `--skip-appcast` | Skip stage [6] entirely (no key check, no archive copy, no appcast). The `.dmg` is still produced and verified. |
 | `--identity <id>` | Developer ID signing identity; overrides `$DEVELOPER_ID_APPLICATION`. **Its presence is what selects Developer-ID mode over ad-hoc.** |
 | `--output-dir <d>` | Where the release artifacts land (default `dist/`). |
+| `--publish` | Run stage [8]: upload to R2, tag `v<version>` and create the GitHub Release. Needs the [one-time setup](#0-one-time-setup-on-the-release-mac). |
+| `--yes` | With `--publish`: don't ask before uploading. |
+| `--skip-github` | With `--publish`: upload to R2 only; run `scripts/github-release.sh --version <v>` later. |
 | `-h`, `--help` | Full inline help. |
 
 ### Environment
@@ -71,11 +110,21 @@ Exit `0` = release produced (or dry-run plan printed).
 | `NOTARIZATION_TEAM_ID` | `notarize.sh` | Your 10-character Apple Developer **Team ID**. |
 | `NOTARIZATION_APP_PASSWORD` | `notarize.sh` | An **app-specific password** (NOT your Apple ID password) from [https://appleid.apple.com](https://appleid.apple.com) → *Sign-In and Security → App-Specific Passwords*. |
 | `MACAMP_BUILD_NUMBER` | `build-macamp.sh` | `CFBundleVersion` override, used instead of the git commit count. Integer or dot-separated integers only. Ignored without `--app-version`. |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | `publish-r2.sh` | Override the R2 keys normally read from the Keychain (`macamp-r2`). |
+| `R2_ACCOUNT_ID`, `R2_BUCKET`, `PUBLIC_BASE` | `publish-r2.sh` | Cloudflare account, bucket (`macamp-downloads`) and public URL (`https://downloads.macamp.si`). The defaults are the production values. |
 | `DEVELOPER_DIR` | everything that shells out to `xcodebuild` | `release.sh` exports `/Applications/Xcode.app/Contents/Developer` when unset — `xcodebuild`, the `@Observable` macro plugin, and Swift Testing all need it. |
 
 ### Typical invocations
 
 ```sh
+# The usual: build, then publish to downloads.macamp.si + GitHub Release
+./scripts/release.sh --version 1.2.3 --keep-installs --publish
+
+# Build only, publish later (e.g. after testing the .dmg yourself)
+./scripts/release.sh --version 1.2.3 --keep-installs
+scripts/publish-r2.sh --version 1.2.3
+scripts/github-release.sh --version 1.2.3
+
 # Credential-free release (ad-hoc; Gatekeeper needs "Open Anyway")
 ./scripts/release.sh --version 1.2.3
 

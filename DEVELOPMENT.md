@@ -340,18 +340,31 @@ Full invariants, lock-free primitive recipes, and pre-allocation patterns: [`.op
 **One command produces a shippable release:**
 
 ```sh
-./scripts/release.sh --version 1.2.3            # ad-hoc, no Apple account needed
+./scripts/release.sh --version 1.2.3 --keep-installs --publish   # build + publish (the usual)
+./scripts/release.sh --version 1.2.3            # ad-hoc build only, no Apple account needed
 ./scripts/release.sh --version 1.2.3 --identity "Developer ID Application: …"
 ./scripts/release.sh --version 0.0.0-test --dry-run   # plan only; no secrets, no network
 ```
 
-`scripts/release.sh` is a pure orchestrator over eight stages — `PREFLIGHT → MODEL → BUILD → SIGN → DMG → NOTARIZE → APPCAST → VERIFY` — each delegating to a standalone script (`tools/separation/fetch-and-convert-model.sh`, `build-macamp.sh`, `codesign-app.sh`, `package-dmg.sh`, `notarize.sh`, `setup-sparkle-key.sh`, `make-appcast.sh`). Full runbook: [`docs-site/content/docs/distribution.mdx`](docs-site/content/docs/distribution.mdx).
+`scripts/release.sh` is a pure orchestrator over nine stages — `PREFLIGHT → MODEL → BUILD → SIGN → DMG → NOTARIZE → APPCAST → VERIFY → PUBLISH` — each delegating to a standalone script (`tools/separation/fetch-and-convert-model.sh`, `build-macamp.sh`, `codesign-app.sh`, `package-dmg.sh`, `notarize.sh`, `setup-sparkle-key.sh`, `make-appcast.sh`, `publish-r2.sh`, `github-release.sh`). Full runbook, including the one-time setup: [`docs-site/content/docs/distribution.mdx`](docs-site/content/docs/distribution.mdx).
+
+**Before your first `--publish`** (once per Mac):
+
+```sh
+brew install awscli gh
+gh auth login                                                  # GitHub.com → HTTPS → browser
+security add-generic-password -s macamp-r2 -a access-key-id -w      # R2 upload key ID
+security add-generic-password -s macamp-r2 -a secret-access-key -w  # R2 upload secret
+scripts/setup-sparkle-key.sh --print-public                    # Sparkle key present? (creates nothing)
+```
+
+**Publishing** uploads to the Cloudflare R2 bucket behind `downloads.macamp.si` (`releases/MacAMP-<v>.dmg`, deltas, `MacAMP.dmg`, `latest.json`, `install.sh`, and `appcast.xml` last), then tags `v<version>` — which deploys `docs.macamp.si` — and creates a GitHub Release page that links to the download. Release notes come from `release-notes/<version>.md`.
 
 **Direct (macOS, `.dmg` + Sparkle):** the shipped macOS app carries a wired `SPUStandardUpdaterController` — a live **Check for Updates…** button and a stable/beta channel picker in **Preferences ▸ Updates**, with automatic background checks opted in via `SUEnableAutomaticChecks`. Updates are EdDSA-signed; the private key is created once by `scripts/setup-sparkle-key.sh` and never leaves the login Keychain. `dist/releases/` retains every shipped `.dmg`, which is what lets Sparkle's `generate_appcast` emit **binary delta** updates.
 
 MacAMP distributes its macOS app directly. The `.dmg` ships the full `macampMac` binary, the projectM library (LGPL, dynamically linked), all AI subscription connectors, and the karaoke separation model.
 
-**CI release:** the GitHub and GitLab tag jobs validate the bundle identifier and Sparkle feed in the built app before signing. Set the production values in `macOS/Project.swift` to enable release packaging. The CI path uses ad-hoc signing. Use the local Developer ID and notarization workflow for public distribution.
+**CI never releases.** GitHub Actions runs the checks (lint, tests, guards) on every push and deploys the docs on `v*` tags; nothing in CI builds, signs or uploads the app. `release.sh` checks the bundle identifier (`si.macamp.MacAMP`) and the Sparkle feed in the built app before signing.
 
 ---
 
