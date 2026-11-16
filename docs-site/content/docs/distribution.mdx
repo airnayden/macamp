@@ -43,7 +43,11 @@ prompts for the value, so nothing lands in your shell history:
 ```sh
 security add-generic-password -s macamp-r2 -a access-key-id -w
 security add-generic-password -s macamp-r2 -a secret-access-key -w
+security add-generic-password -s macamp-r2 -a account-id -w
 ```
+
+The third is the Cloudflare account ID (Workers & Pages → Account details). It isn't a
+credential, but like every key and ID it stays out of the repository.
 
 For `gh auth login`, choose **GitHub.com → HTTPS → Login with a web browser**. The
 release step only tags commits and creates release pages; it doesn't use GitHub
@@ -111,7 +115,7 @@ Exit `0` = release produced (or dry-run plan printed).
 | `NOTARIZATION_APP_PASSWORD` | `notarize.sh` | An **app-specific password** (NOT your Apple ID password) from [https://appleid.apple.com](https://appleid.apple.com) → *Sign-In and Security → App-Specific Passwords*. |
 | `MACAMP_BUILD_NUMBER` | `build-macamp.sh` | `CFBundleVersion` override, used instead of the git commit count. Integer or dot-separated integers only. Ignored without `--app-version`. |
 | `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | `publish-r2.sh` | Override the R2 keys normally read from the Keychain (`macamp-r2`). |
-| `R2_ACCOUNT_ID`, `R2_BUCKET`, `PUBLIC_BASE` | `publish-r2.sh` | Cloudflare account, bucket (`macamp-downloads`) and public URL (`https://downloads.macamp.si`). The defaults are the production values. |
+| `R2_ACCOUNT_ID`, `R2_BUCKET`, `PUBLIC_BASE` | `publish-r2.sh` | Cloudflare account (normally the Keychain's `macamp-r2` / `account-id`; there is no default), bucket (`macamp-downloads`) and public URL (`https://downloads.macamp.si`). The bucket and URL defaults are the production values. |
 | `DEVELOPER_DIR` | everything that shells out to `xcodebuild` | `release.sh` exports `/Applications/Xcode.app/Contents/Developer` when unset — `xcodebuild`, the `@Observable` macro plugin, and Swift Testing all need it. |
 
 ### Typical invocations

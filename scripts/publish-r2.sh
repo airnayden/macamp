@@ -36,9 +36,11 @@
 #     security add-generic-password -s macamp-r2 -a access-key-id -w
 #     security add-generic-password -s macamp-r2 -a secret-access-key -w
 #   R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY in the environment override them.
+#   The Cloudflare account ID isn't in this repo either; it sits next to them:
+#     security add-generic-password -s macamp-r2 -a account-id -w
 #
 # Env:
-#   R2_ACCOUNT_ID   Cloudflare account ID (not a secret; default below)
+#   R2_ACCOUNT_ID   Cloudflare account ID (overrides the Keychain's macamp-r2 / account-id)
 #   R2_BUCKET       bucket name (default: macamp-downloads)
 #   PUBLIC_BASE     public base URL (default: https://downloads.macamp.si)
 #
@@ -55,7 +57,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
-R2_ACCOUNT_ID="${R2_ACCOUNT_ID:-7abb802f0eebeac4d48c5d1731fffcfc}"
+# No default: the account ID comes from the environment or, at upload time, the Keychain.
+R2_ACCOUNT_ID="${R2_ACCOUNT_ID:-}"
 R2_BUCKET="${R2_BUCKET:-macamp-downloads}"
 PUBLIC_BASE="${PUBLIC_BASE:-https://downloads.macamp.si}"
 KEYCHAIN_SERVICE="macamp-r2"
@@ -129,7 +132,7 @@ note "version:   ${VERSION} (build ${BUILD}, macOS ${MIN_OS}+)"
 note "image:     ${DMG_PATH} ($(du -h "${DMG_PATH}" | awk '{print $1}'))"
 note "sha256:    ${SHA256}"
 note "deltas:    ${#DELTAS[@]}"
-note "bucket:    ${R2_BUCKET} (account ${R2_ACCOUNT_ID})"
+note "bucket:    ${R2_BUCKET} (account ${R2_ACCOUNT_ID:-from the Keychain at upload time})"
 note "public at: ${PUBLIC_BASE}"
 
 LATEST_JSON="$(mktemp "${TMPDIR:-/tmp}"/macamp-latest.XXXXXX)"
@@ -173,6 +176,10 @@ SECRET_KEY="${R2_SECRET_ACCESS_KEY:-$(keychain secret-access-key)}"
 [[ -n "${ACCESS_KEY}" && -n "${SECRET_KEY}" ]] || fail 2 "no R2 credentials. Store them once with:
       security add-generic-password -s ${KEYCHAIN_SERVICE} -a access-key-id -w
       security add-generic-password -s ${KEYCHAIN_SERVICE} -a secret-access-key -w"
+R2_ACCOUNT_ID="${R2_ACCOUNT_ID:-$(keychain account-id)}"
+[[ -n "${R2_ACCOUNT_ID}" ]] || fail 2 "no Cloudflare account ID. Store it once with:
+      security add-generic-password -s ${KEYCHAIN_SERVICE} -a account-id -w
+    (copy it from Workers & Pages → Account details), or set R2_ACCOUNT_ID."
 
 # Scope the credentials to this process and ignore any ~/.aws profile, so a
 # personal AWS setup can never redirect or authenticate these uploads.

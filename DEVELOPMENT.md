@@ -355,6 +355,7 @@ brew install awscli gh
 gh auth login                                                  # GitHub.com → HTTPS → browser
 security add-generic-password -s macamp-r2 -a access-key-id -w      # R2 upload key ID
 security add-generic-password -s macamp-r2 -a secret-access-key -w  # R2 upload secret
+security add-generic-password -s macamp-r2 -a account-id -w         # Cloudflare account ID
 scripts/setup-sparkle-key.sh --print-public                    # Sparkle key present? (creates nothing)
 ```
 

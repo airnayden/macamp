@@ -1,9 +1,10 @@
 // Cloudflare Worker that serves the static Next.js export (out/) at docs.macamp.si.
-// Deployed by .github/workflows/docs-deploy.yml on v* tags; locally: npm run deploy
+// Deployed by .github/workflows/docs.yml on v* tags; locally: npm run deploy.
+// No account ID or token lives here: wrangler reads CLOUDFLARE_ACCOUNT_ID and
+// CLOUDFLARE_API_TOKEN from the environment (the docs-production secrets in CI).
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "macamp-docs",
-  "account_id": "7abb802f0eebeac4d48c5d1731fffcfc",
   "compatibility_date": "2026-11-01",
   "assets": {
     "directory": "./out",
