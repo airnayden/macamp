@@ -322,6 +322,10 @@ jobs:
   # the static grep guard cannot, e.g. accidental macOS-only API usage). xcodebuild
   # builds the SwiftPM package via its auto-generated "PlayerCore-Package" scheme;
   # no .xcodeproj/.xcworkspace is committed, so the package is resolved directly.
+  # -disablePackageRepositoryCache: clone straight into .build-ios instead of
+  # going through ~/Library/Caches/org.swift.swiftpm. A fresh runner gains nothing
+  # from that shared cache, and a stale entry in it once failed resolution with
+  # "cannot change to .../repositories/SFBAudioEngine-afcbe147".
   # ---------------------------------------------------------------------------
   ios-portability:
     name: PlayerCore builds for iOS (portability)
@@ -341,6 +345,7 @@ jobs:
             -scheme PlayerCore-Package \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath .build-ios \
+            -disablePackageRepositoryCache \
             -quiet
 
       - name: Build AIConnectorKit for iOS Simulator
@@ -350,6 +355,7 @@ jobs:
             -scheme AIConnectorKit \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath .build-ios \
+            -disablePackageRepositoryCache \
             CODE_SIGNING_ALLOWED=NO \
             -quiet
 
