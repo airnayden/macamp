@@ -1,7 +1,9 @@
 name: Docs
 
-# Builds the Fumadocs user guide whenever it changes, and deploys it to the
-# Cloudflare Worker at https://docs.macamp.si when a release tag (v*) is pushed.
+# Builds the Fumadocs user guide and deploys it to the Cloudflare Worker at
+# https://docs.macamp.si when a release tag (v*) is pushed. Pushes to branches and
+# pull requests start no run: the tag run builds first and a failed build never
+# deploys. "Run workflow" (workflow_dispatch) still builds any branch on demand.
 #
 # The deploy job reads CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID from the
 # `docs-production` environment, which only v* tags may use, so branches,
@@ -10,15 +12,13 @@ name: Docs
 # The deploy job builds the pages it ships itself, because only it can read
 # `docs-production`, which also holds DOCS_ANALYTICS_TOKEN (the Web Analytics token
 # baked into every page; kept out of the repo). Without it the docs still deploy but
-# count nothing. The build job checks every push and pull request.
+# count nothing.
 
+# Every v* tag deploys, app releases included: GitHub never applied a `paths`
+# filter to tag pushes, so none is listed.
 on:
   push:
-    branches: ["**"]
     tags: ["v*"]
-    paths: ["docs-site/**", ".github/workflows/docs.yml"]
-  pull_request:
-    paths: ["docs-site/**", ".github/workflows/docs.yml"]
   workflow_dispatch:
 
 concurrency:
