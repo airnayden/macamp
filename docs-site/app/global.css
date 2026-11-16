@@ -338,7 +338,14 @@ body {
   font-weight: 800;
   font-stretch: 112%;
   font-size: 1.65rem;
-  margin-top: 3.2rem;
+  margin-top: 2.5rem;
+}
+/* The rule above outranks the prose plugin's own resets, so restate them: no top margin
+   on a page's first block, or on a heading right after a `---` divider (the divider
+   already carries the spacing). */
+#nd-page .prose > :first-child,
+#nd-page .prose hr + :is(h2, h3, h4) {
+  margin-top: 0;
 }
 #nd-page .prose h3 {
   font-weight: 700;
@@ -382,6 +389,7 @@ body {
   content: none;
 }
 #nd-page .prose hr {
+  margin-block: 2rem;
   border: 0;
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--mac-line-strong), transparent);
