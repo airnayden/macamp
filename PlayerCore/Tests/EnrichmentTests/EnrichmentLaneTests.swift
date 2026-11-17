@@ -115,13 +115,44 @@ struct EnrichmentLaneTests {
         service.pause()
         try? await Task.sleep(for: .milliseconds(300))
         let settled = service.progress.completed
+        let started = lyrics.requests.count
         #expect(settled < 16)
         try? await Task.sleep(for: .milliseconds(300))
+        #expect(lyrics.requests.count == started)
         #expect(service.progress.completed == settled)
 
         service.resume()
         await pollUntil(timeout: .seconds(20)) { !service.isRunning }
         #expect(service.progress.completed == 16)
+    }
+
+    @Test("a pause that lands while the lyrics lane waits for a free slot holds the next start")
+    func pauseDuringSlotWaitHoldsTheNextStart() async throws {
+        let slots = EnrichmentService.lyricsLaneConcurrency
+        let database = try AppDatabase.makeEmpty()
+        try seedComplete(database, count: slots + 2)
+        let lyrics = GatedLyricsProvider()
+        let service = makeService(
+            database,
+            fetcher: StubMetadataFetcher(returning: nil),
+            info: FakeInfoService(cachesEverything: true),
+            lyrics: lyrics
+        )
+
+        // Every slot is held; give the lane time to take the next track and park
+        // on a free slot, which is where this pause has to land.
+        service.start()
+        await pollUntil { lyrics.requests.count == slots }
+        try? await Task.sleep(for: .milliseconds(200))
+        service.pause()
+        lyrics.release()
+        await pollUntil { service.progress.completed == slots }
+        try? await Task.sleep(for: .milliseconds(200))
+        #expect(lyrics.requests.count == slots)
+
+        service.resume()
+        await pollUntil(timeout: .seconds(20)) { !service.isRunning }
+        #expect(service.progress.completed == slots + 2)
     }
 
     @Test("pause blocks new serial-lane starts until resume")

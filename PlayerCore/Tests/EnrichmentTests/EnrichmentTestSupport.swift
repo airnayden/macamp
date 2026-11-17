@@ -168,6 +168,31 @@ final class SlowLyricsProvider: LyricsProviding, @unchecked Sendable {
     }
 }
 
+/// A ``LyricsProviding`` whose resolves all hold until ``release()``, so a test
+/// can fill every lyrics-lane slot and act while they are still occupied. Once
+/// released, every later resolve returns at once.
+final class GatedLyricsProvider: LyricsProviding, @unchecked Sendable {
+    private let lock = NSLock()
+    private var released = false
+    private var seen: [LyricsRequest] = []
+
+    var requests: [LyricsRequest] {
+        lock.withLock { seen }
+    }
+
+    func release() {
+        lock.withLock { released = true }
+    }
+
+    func resolveLyrics(for request: LyricsRequest, options _: LyricsOptions) async throws -> Lyrics? {
+        lock.withLock { seen.append(request) }
+        while !lock.withLock({ released }) {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        return nil
+    }
+}
+
 /// A track with every fill-missing field populated, so ``EnrichmentService``
 /// classifies it as needing no MusicBrainz work at all.
 func metadataCompleteTrack(path: String, title: String, artist: String) -> TrackRecord {

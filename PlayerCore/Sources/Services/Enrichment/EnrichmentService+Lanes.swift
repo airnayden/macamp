@@ -92,12 +92,15 @@ private extension EnrichmentService {
             var inFlight = 0
             for await track in jobs {
                 if Task.isCancelled { break }
-                await waitWhilePaused()
-                if Task.isCancelled { break }
+                // Free a slot BEFORE consulting the pause gate: waiting for one
+                // suspends, and a pause() that lands meanwhile must still hold
+                // this track. Nothing suspends between the gate and addTask.
                 if inFlight == Self.lyricsLaneConcurrency {
                     _ = await group.next()
                     inFlight -= 1
                 }
+                await waitWhilePaused()
+                if Task.isCancelled { break }
                 group.addTask { [self] in
                     await runLyricsWork(for: track)
                 }
